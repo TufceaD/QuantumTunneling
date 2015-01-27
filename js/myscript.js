@@ -1,29 +1,29 @@
 var values = {
-	nDomains: 5,
+	nRegions: 5,
 	defaultLength: 0,
 	maxY: 20,
 	minY: view.viewSize.height - 20,
 	minX: 20,
 	maxX: view.viewSize.width - 20,
 	xAxisHeight: ( view.viewSize.height - 20) * .6,
+	maxEnergyHeight: 75,
 	walls: [],
 	ceilings: [],
 	Setup: function(){
-		this.defaultLength =  Math.round( (this.maxX - this.minX) / this.nDomains );
+		this.defaultLength =  Math.round( (this.maxX - this.minX) / this.nRegions );
 	
-		for ( var i = 0; i < this.nDomains-1; i++){
+		for ( var i = 0; i < this.nRegions-1; i++){
 		this.walls[i] = this.defaultLength + this.defaultLength*i;
 		}
 	
-		for ( var i = 0; i < this.nDomains-2; i++){
+		for ( var i = 0; i < this.nRegions-2; i++){
 		this.ceilings[i] = Math.round( this.maxY + (this.minY - this.maxY)*Math.random() );
 		}
 	}
 }
 values.Setup();
 	
-console.log(values.walls)
-console.log(values.ceilings)
+
 
 
 var pathMainRect;
@@ -64,7 +64,7 @@ function createAxes(){
 }
 
 
-var domainsData = {
+var regionsData = {
 	pathWalls: [],
 	pathCeilings: [],
 	pathLeftSide: [],
@@ -74,46 +74,86 @@ var domainsData = {
 	pMiddleRight: [],
 	pBottom: [],
 	pXAxis: [],
-	domainsGroup: new Group(),
+	energy: Math.random()*(values.xAxisHeight - values.maxEnergyHeight),
+	regionsGroup: new Group(),
 	createData: function(){ 
-		for (var i = 0; i < values.nDomains-1; i++){
+		for (var i = 0; i < values.nRegions-1; i++){
 		this.pTop[i] = new Point( values.walls[i], values.minY);
 		this.pBottom[i] = new Point( values.walls[i], values.maxY);
 		this.pXAxis[i] = new Point( values.walls[i], values.xAxisHeight);
 		}
-		for (var i = 0; i < values.nDomains-2; i++){
+		for (var i = 0; i < values.nRegions-2; i++){
 		this.pMiddleLeft[i] = new Point( values.walls[i],values.ceilings[i]);
 		this.pMiddleRight[i] = new Point( values.walls[i+1],values.ceilings[i]);
 		}
 	},
-	createDomain: function(){
-		for (var i = 0; i < values.nDomains-1; i++){
+	createregion: function(){
+		for (var i = 0; i < values.nRegions-1; i++){
 		this.pathWalls[i] = new Path(this.pTop[i],this.pBottom[i]);
-		this.domainsGroup.addChild(this.pathWalls[i]);
+		this.regionsGroup.addChild(this.pathWalls[i]);
 		this.pathWalls[i].dashArray = [5,5];
 		}
 	
-		for (var i = 0; i < values.nDomains-2; i++){
+		for (var i = 0; i < values.nRegions-2; i++){
 		this.pathCeilings[i] = new Path(this.pMiddleLeft[i], this.pMiddleRight[i]);
 		this.pathLeftSide[i] = new Path(this.pMiddleLeft[i], this.pXAxis[i]);
 		this.pathRightSide[i] = new Path(this.pMiddleRight[i], this.pXAxis[i+1]);
 	
-		this.domainsGroup.addChild(this.pathCeilings[i]);
-		this.domainsGroup.addChild(this.pathLeftSide[i]);
-		this.domainsGroup.addChild(this.pathRightSide[i]);
+		this.regionsGroup.addChild(this.pathCeilings[i]);
+		this.regionsGroup.addChild(this.pathLeftSide[i]);
+		this.regionsGroup.addChild(this.pathRightSide[i]);
 		}
-		this.domainsGroup.strokeColor = 'black';
-	}
+		this.regionsGroup.strokeColor = 'black';
+		this.regionsGroup.strokeWidth = 3;
+	},
 	bindMouseEvents: function(){
-		
+		for (i = 0; i < values.nRegions - 1; i++){
+		this.pathWalls[i].onMouseDrag = function(event) {
+			var temp = regionsData.pathWalls.indexOf(this);
+			
+			var newXValue = event.point.clone().x;
+			regionsData.pathWalls[temp].segments[0].point.x = newXValue;
+			regionsData.pathWalls[temp].segments[1].point.x = newXValue;
+			
+			if ( temp < values.nRegions - 2){
+			regionsData.pathLeftSide[temp].segments[0].point.x = newXValue;
+			regionsData.pathLeftSide[temp].segments[1].point.x = newXValue;
+			regionsData.pathCeilings[temp].segments[0].point.x = newXValue;
+			}
+			
+			if ( temp > 0 ){
+			regionsData.pathRightSide[temp-1].segments[0].point.x = newXValue;
+			regionsData.pathRightSide[temp-1].segments[1].point.x = newXValue;
+			regionsData.pathCeilings[temp-1].segments[1].point.x = newXValue;
+
+			}
+			this.selected = true;
+			
+		}
+		this.pathWalls[i].onMouseUp = function(event){
+			this.selected = false;
+		}
+		this.pathWalls[i].onMouseLeave = function(event){
+			this.selected = false;
+		}
+	}
 	}
 }
-domainsData.createData();
-
 
 createMainRect();
 createAxes();
-domainsData.createDomain()
+regionsData.createData();
+regionsData.createregion()
+regionsData.bindMouseEvents();
+axes.sendToBack();
+for ( i = 0; i < values.nRegions - 1; i++){
+	regionsData.pathWalls[i].bringToFront();
+}
+
+
+console.log(values.walls)
+console.log(values.ceilings)
+
 
 function onResize(){
 console.log(view.viewSize);

@@ -1,29 +1,29 @@
 var values = {
-	nDomains: 5,
+	nregions: 5,
 	defaultLength: 0,
 	maxY: 20,
 	minY: view.viewSize.height - 20,
 	minX: 20,
 	maxX: view.viewSize.width - 20,
 	xAxisHeight: ( view.viewSize.height - 20) * .6,
+	maxEnergyHeight: 75,
 	walls: [],
 	ceilings: [],
 	Setup: function(){
-		this.defaultLength =  Math.round( (this.maxX - this.minX) / this.nDomains );
+		this.defaultLength =  Math.round( (this.maxX - this.minX) / this.nregions );
 	
-		for ( var i = 0; i < this.nDomains-1; i++){
+		for ( var i = 0; i < this.nregions-1; i++){
 		this.walls[i] = this.defaultLength + this.defaultLength*i;
 		}
 	
-		for ( var i = 0; i < this.nDomains-2; i++){
+		for ( var i = 0; i < this.nregions-2; i++){
 		this.ceilings[i] = Math.round( this.maxY + (this.minY - this.maxY)*Math.random() );
 		}
 	}
 }
 values.Setup();
 	
-console.log(values.walls)
-console.log(values.ceilings)
+
 
 
 var pathMainRect;
@@ -64,48 +64,77 @@ function createAxes(){
 }
 
 
-var domains = new Group();
-
-var pathWalls = [];
-var pathCeilings = [];
-var pathLeftSide = [];
-var pathRightSide = [];
-function createDomain(){
-	var pTop = [];
-	var pMiddleLeft = [];
-	var pMiddleRight = [];
-	var pBottom = [];
-	var pXAxis = [];
+var regionsData = {
+	pathWalls: [],
+	pathCeilings: [],
+	pathLeftSide: [],
+	pathRightSide: [],
+	pTop: [],
+	pMiddleLeft: [],
+	pMiddleRight: [],
+	pBottom: [],
+	pXAxis: [],
+	energy: Math.random()*(values.xAxisHeight - values.maxEnergyHeight),
+	regionsGroup: new Group(),
+	createData: function(){ 
+		for (var i = 0; i < values.nregions-1; i++){
+		this.pTop[i] = new Point( values.walls[i], values.minY);
+		this.pBottom[i] = new Point( values.walls[i], values.maxY);
+		this.pXAxis[i] = new Point( values.walls[i], values.xAxisHeight);
+		}
+		for (var i = 0; i < values.nregions-2; i++){
+		this.pMiddleLeft[i] = new Point( values.walls[i],values.ceilings[i]);
+		this.pMiddleRight[i] = new Point( values.walls[i+1],values.ceilings[i]);
+		}
+	},
+	createregion: function(){
+		for (var i = 0; i < values.nregions-1; i++){
+		this.pathWalls[i] = new Path(this.pTop[i],this.pBottom[i]);
+		this.regionsGroup.addChild(this.pathWalls[i]);
+		this.pathWalls[i].dashArray = [5,5];
+		}
 	
-	for (var i = 0; i < values.nDomains-1; i++){
-	pTop[i] = new Point( values.walls[i], values.minY);
-	pBottom[i] = new Point( values.walls[i], values.maxY);
-	pXAxis[i] = new Point( values.walls[i], values.xAxisHeight);
+		for (var i = 0; i < values.nregions-2; i++){
+		this.pathCeilings[i] = new Path(this.pMiddleLeft[i], this.pMiddleRight[i]);
+		this.pathLeftSide[i] = new Path(this.pMiddleLeft[i], this.pXAxis[i]);
+		this.pathRightSide[i] = new Path(this.pMiddleRight[i], this.pXAxis[i+1]);
 	
-	pathWalls[i] = new Path(pTop[i],pBottom[i]);
-	domains.addChild(pathWalls[i]);
-	pathWalls[i].dashArray = [5,5];
+		this.regionsGroup.addChild(this.pathCeilings[i]);
+		this.regionsGroup.addChild(this.pathLeftSide[i]);
+		this.regionsGroup.addChild(this.pathRightSide[i]);
+		}
+		this.regionsGroup.strokeColor = 'black';
+		this.regionsGroup.strokeWidth = 3;
+	},
+	bindMouseEvents: function(){
+		for (i = 0; i < values.nregions - 1; i++){
+		this.pathWalls[i].onMouseDrag = function(event) {
+			var temp = this.index;
+			var newXValue = event.point.clone().x;
+			regionsData.pathWalls[temp].segments[0].x = newXValue;
+			regionsData.pathWalls[temp].segments[1].x = newXValue;
+			this.selected = true;
+		}
+		this.pathWalls[i].onMouseUp = function(event){
+			this.selected = false;
+		}
 	}
-	
-	for (var i = 0; i < values.nDomains-2; i++){
-	pMiddleLeft[i] = new Point( values.walls[i],values.ceilings[i]);
-	pMiddleRight[i] = new Point( values.walls[i+1],values.ceilings[i]);
-	
-	pathCeilings[i] = new Path(pMiddleLeft[i], pMiddleRight[i]);
-	pathLeftSide[i] = new Path(pMiddleLeft[i], pXAxis[i]);
-	pathRightSide[i] = new Path(pMiddleRight[i], pXAxis[i+1]);
-	
-	domains.addChild(pathCeilings[i]);
-	domains.addChild(pathLeftSide[i]);
-	domains.addChild(pathRightSide[i]);
 	}
-	domains.strokeColor = 'black';
 }
 
 createMainRect();
 createAxes();
-createDomain()
+regionsData.createData();
+regionsData.createregion()
+regionsData.bindMouseEvents();
+axes.sendToBack();
+for ( i = 0; i < values.nRegions - 1; i++){
+	regionsData.pathWalls[i].bringToFront();
+}
 
+
+console.log(values.walls)
+console.log(values.ceilings)
 
 
 function onResize(){
