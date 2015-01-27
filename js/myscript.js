@@ -74,7 +74,10 @@ var regionsData = {
 	pMiddleRight: [],
 	pBottom: [],
 	pXAxis: [],
-	energy: Math.random()*(values.xAxisHeight - values.maxEnergyHeight),
+	pEnergyLeft: new Point,
+	pEnergyRight: new Point,
+	energy: Math.round(Math.random()*(values.xAxisHeight - values.maxEnergyHeight)),
+	pathEnergy: new Path(),
 	regionsGroup: new Group(),
 	createData: function(){ 
 		for (var i = 0; i < values.nRegions-1; i++){
@@ -86,8 +89,10 @@ var regionsData = {
 		this.pMiddleLeft[i] = new Point( values.walls[i],values.ceilings[i]);
 		this.pMiddleRight[i] = new Point( values.walls[i+1],values.ceilings[i]);
 		}
+		this.pEnergyLeft = { x: values.minX , y: values.xAxisHeight - this.energy};
+		this.pEnergyRight = { x: values.maxX , y: values.xAxisHeight - this.energy};
 	},
-	createregion: function(){
+	createRegion: function(){
 		for (var i = 0; i < values.nRegions-1; i++){
 		this.pathWalls[i] = new Path(this.pTop[i],this.pBottom[i]);
 		this.regionsGroup.addChild(this.pathWalls[i]);
@@ -103,15 +108,48 @@ var regionsData = {
 		this.regionsGroup.addChild(this.pathLeftSide[i]);
 		this.regionsGroup.addChild(this.pathRightSide[i]);
 		}
+		this.pathEnergy.add(this.pEnergyLeft);
+		this.pathEnergy.add(this.pEnergyRight);
+		
+		this.regionsGroup.addChild(this.pathEnergy);
+		
 		this.regionsGroup.strokeColor = 'black';
 		this.regionsGroup.strokeWidth = 3;
+		this.pathEnergy.strokeColor = 'blue';
+		
+	},
+	constraintX: function( newX, temp){
+	var answer;
+	if ( temp == 0){
+	 answer = Math.max( newX, values.minX +20);
+	}else{
+	answer = Math.max( newX, regionsData.pathWalls[temp-1].segments[0].point.x +20);
+	}
+	if ( temp == values.nRegions - 2){
+	 answer = Math.min( answer , values.maxX -20);
+	}else{
+	answer = Math.min( answer , regionsData.pathWalls[temp+1].segments[0].point.x -20 );
+		}
+	return answer;
+	},
+	constraintY: function( newY){
+	var answer;
+	answer = Math.max( newY, values.maxY );
+	answer = Math.min( answer, values.minY );
+	return answer;
+	},
+	constraintE: function( newEpos){
+	var answer;
+	answer = Math.min( newEpos, values.xAxisHeight);
+	answer = Math.max( answer, values.maxY + 20);
+	return answer;
 	},
 	bindMouseEvents: function(){
 		for (i = 0; i < values.nRegions - 1; i++){
 		this.pathWalls[i].onMouseDrag = function(event) {
 			var temp = regionsData.pathWalls.indexOf(this);
 			
-			var newXValue = event.point.clone().x;
+			var newXValue = regionsData.constraintX( event.point.clone().x, temp);
 			regionsData.pathWalls[temp].segments[0].point.x = newXValue;
 			regionsData.pathWalls[temp].segments[1].point.x = newXValue;
 			
@@ -128,7 +166,6 @@ var regionsData = {
 
 			}
 			this.selected = true;
-			
 		}
 		this.pathWalls[i].onMouseUp = function(event){
 			this.selected = false;
@@ -137,13 +174,48 @@ var regionsData = {
 			this.selected = false;
 		}
 	}
+	for ( i = 0; i < values.nRegions - 2; i++){
+	this.pathCeilings[i].onMouseDrag = function(event){
+	var temp = regionsData.pathCeilings.indexOf(this);
+	var newYValue = regionsData.constraintY(event.point.clone().y);
+	
+	regionsData.pathCeilings[temp].segments[0].point.y = newYValue;
+	regionsData.pathCeilings[temp].segments[1].point.y = newYValue;
+	
+	regionsData.pathLeftSide[temp].segments[0].point.y = newYValue;
+	regionsData.pathRightSide[temp].segments[0].point.y = newYValue;
+	
+	this.selected = true;
+	}
+	this.pathCeilings[i].onMouseOn = function(event){
+	this.selected = false;
+	}
+	this.pathCeilings[i].onMouseLeave = function(event){
+	this.selected = false;
+	}
+	
+	}
+	this.pathEnergy.onMouseDrag = function(event){
+	this.selected = true;
+	var newEnergyPos = regionsData.constraintE(event.point.clone().y);
+	regionsData.energy = Math.round(values.xAxisHeight - newEnergyPos);
+	regionsData.pathEnergy.segments[0].point.y = newEnergyPos;
+	regionsData.pathEnergy.segments[1].point.y = newEnergyPos;
+	
+	}
+	this.pathEnergy.onMouseOn = function(event){
+	this.selected = false;
+	}
+	this.pathEnergy.onMouseLeave = function(event){
+	this.selected = false;
+	}
 	}
 }
 
 createMainRect();
 createAxes();
 regionsData.createData();
-regionsData.createregion()
+regionsData.createRegion()
 regionsData.bindMouseEvents();
 axes.sendToBack();
 for ( i = 0; i < values.nRegions - 1; i++){
