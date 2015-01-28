@@ -1,5 +1,5 @@
 var values = {
-	nRegions: 5,
+	nRegions: 3,
 	defaultLength: 0,
 	maxY: 20,
 	minY: view.viewSize.height - 20,
@@ -24,31 +24,45 @@ var values = {
 values.Setup();
 	
 var physics = {
- hbar: 10000,
+ hbar: 100,
  mass: 1/2,
  rExpPlus: function(x,E,V){
- return math.exp(math.complex(x*math.sqrt(2*this.mass*(V-E))/this.hbar,0));
+ var q = math.sqrt(2*physics.mass*(V-E))/physics.hbar;
+ return math.exp(math.complex(x*q,0));
  },
  rExpMinus: function(x,E,V){
- return math.exp(math.complex(-x*math.sqrt(2*this.mass*(V-E))/this.hbar,0));
+  var q = math.sqrt(2*physics.mass*(V-E))/physics.hbar;
+ return math.exp(math.complex(-x*q,0));
  },
  cExpPlus: function(x,E,V){
- return answer = math.exp(math.complex(0,x*math.sqrt(2*this.mass*(E-V))/this.hbar));
+  var k = math.sqrt(2*physics.mass*(E-V))/physics.hbar;
+ return answer = math.exp(math.complex(0,x*k));
  },
  cExpMinus: function(x,E,V){
-  return answer = math.exp(math.complex(0,-x*math.sqrt(2*this.mass*(E-V))/this.hbar));
+  var k = math.sqrt(2*physics.mass*(E-V))/physics.hbar;
+  return answer = math.exp(math.complex(0,-x*k));
  },
  rExpPlusPrime: function(x,E,V){
- return math.multiply( math.complex(math.complex(math.sqrt(2*this.mass*(V-E))/this.hbar,0)) , this.rExpPlus(x,E,V));
+  var q = math.sqrt(2*physics.mass*(V-E))/physics.hbar;
+ return math.multiply( math.complex(q,0) , physics.rExpPlus(x,E,V));
  },
  rExpMinusPrime: function(x,E,V){
-  return math.multiply( math.complex(math.complex(-math.sqrt(2*this.mass*(V-E))/this.hbar,0)) , this.rExpMinus(x,E,V));
+  var q = math.sqrt(2*physics.mass*(V-E))/physics.hbar;
+  return math.multiply( math.complex(-q,0) , physics.rExpMinus(x,E,V));
  },
  cExpPlusPrime: function(x,E,V){
-  return math.multiply( math.complex(0,math.complex(math.sqrt(2*this.mass*(E-V))/this.hbar)) , this.cExpPlus(x,E,V));
+  var k = math.sqrt(2*physics.mass*(E-V))/physics.hbar;
+  return math.multiply( math.complex(0,k) , physics.cExpPlus(x,E,V));
  },
  cExpMinusPrime: function(x,E,V){
-   return math.multiply( math.complex(0,math.complex(-math.sqrt(2*this.mass*(E-V))/this.hbar)) , this.cExpPlus(x,E,V));
+  var k = math.sqrt(2*physics.mass*(E-V))/physics.hbar;
+   return math.multiply( math.complex(0,-k) , physics.cExpMinus(x,E,V));
+ },
+ linear: function(x,E,V){
+	return math.complex(x, 0);
+ },
+ constant: function(x,E,V){
+	return math.complex(1, 0);
  }
 }
 
@@ -96,23 +110,29 @@ var regionsData = {
 	pathCeilings: [],
 	pathLeftSide: [],
 	pathRightSide: [],
+	pathPlot: new Path(),
 	pTop: [],
 	pMiddleLeft: [],
 	pMiddleRight: [],
 	pBottom: [],
 	pXAxis: [],
-	pEnergyLeft: new Point,
-	pEnergyRight: new Point,
+	pEnergyLeft: new Point(),
+	pEnergyRight: new Point(),
 	energy: Math.round(Math.random()*(values.xAxisHeight - values.maxEnergyHeight)),
 	potentials: [],
+	boundaries: [],
 	pathEnergy: new Path(),
 	matrixCoefs: math.zeros(values.nRegions*2 - 1, values.nRegions*2 - 1),
+	vectorCoefs: [],
+	solutionCoefs: [],
+	functionHandles: [],
 	regionsGroup: new Group(),
 	createData: function(){ 
 		for (var i = 0; i < values.nRegions-1; i++){
 		this.pTop[i] = new Point( values.walls[i], values.minY);
 		this.pBottom[i] = new Point( values.walls[i], values.maxY);
 		this.pXAxis[i] = new Point( values.walls[i], values.xAxisHeight);
+		this.boundaries[i] = values.walls[i];
 		}
 		for (var i = 0; i < values.nRegions-2; i++){
 		this.pMiddleLeft[i] = new Point( values.walls[i],values.ceilings[i]);
@@ -123,6 +143,13 @@ var regionsData = {
 		this.potentials[values.nRegions - 1] = 0;
 		this.pEnergyLeft = { x: values.minX , y: values.xAxisHeight - this.energy};
 		this.pEnergyRight = { x: values.maxX , y: values.xAxisHeight - this.energy};
+		
+		for (var i = 0; i < values.nRegions*2 - 1; i++){
+		this.vectorCoefs[i] = 0;
+		}
+		this.vectorCoefs[values.nRegions*2 - 2] = 5;
+		
+		
 		
 	},
 	createRegion: function(){
@@ -149,6 +176,8 @@ var regionsData = {
 		this.regionsGroup.strokeColor = 'black';
 		this.regionsGroup.strokeWidth = 3;
 		this.pathEnergy.strokeColor = 'blue';
+		this.pathPlot.strokeColor = 'red';
+		this.pathPlot.strokeWidth = 3;
 		
 	},
 	constraintX: function( newX, temp){
@@ -177,63 +206,126 @@ var regionsData = {
 	answer = Math.max( answer, values.maxY + 20);
 	return answer;
 	},
+	setFunctionHandles: function() {
+		for (var i = 0; i < values.nRegions -1; i++){
+		var index = 2*i;
+		var E = regionsData.energy;
+		var V = regionsData.potentials[i];
+		if ( E < V ){
+		 this.functionHandles[index] = physics.rExpPlus;
+		 this.functionHandles[index+1] = physics.rExpMinus;
+		}else if ( E > V ){
+		 this.functionHandles[index] = physics.cExpPlus;
+		 this.functionHandles[index+1] = physics.cExpMinus;
+		}else{
+		 this.functionHandles[index] = physics.linear;
+		 this.functionHandles[index+1] = physics.constant;
+		}
+		}
+		this.functionHandles[values.nRegions*2 - 2] = physics.cExpPlus;
+	},
 	setMatrix: function(){
 	var index1 = 0;
 	var index2 = 0;
-	for ( i = 0 ; i < values.nRegions - 1; i++ ){
+	for (var i = 0 ; i < values.nRegions - 1; i++ ){
 		setRightBoundaryConditions(i);
 	}
-	for ( i = 1 ; i < values.nRegions ; i++ ){
+	for (var i = 1 ; i < values.nRegions ; i++ ){
 		setLeftBoundaryConditions(i);
 	}
 	
 	regionsData.matrixCoefs.set([values.nRegions*2 - 2 , 0],1);
+	regionsData.matrixCoefs.set([values.nRegions*2 - 2 , 1],1);
 	
 	function setRightBoundaryConditions(index){
-		indexI = 2*index;
-		indexJ = 2*index;
-		if (regionsData.energy < regionsData.potentials[index]){
-		 regionsData.matrixCoefs.set([indexI, indexJ], 1)
-		 regionsData.matrixCoefs.set([indexI, indexJ+1], 1)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ], 2)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], 2)
-		}else if (regionsData.energy > regionsData.potentials[index]){
-		regionsData.matrixCoefs.set([indexI, indexJ], 3)
-		 regionsData.matrixCoefs.set([indexI, indexJ+1], 3)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ], 4)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], 4)
+		var indexI = 2*index;
+		var indexJ = 2*index;
+		var x = regionsData.boundaries[index];
+		var E = regionsData.energy;
+		var V = regionsData.potentials[index];
+		if ( E < V ){
+		 regionsData.matrixCoefs.set([indexI, indexJ], physics.rExpPlus(x,E,V));
+		 regionsData.matrixCoefs.set([indexI, indexJ+1], physics.rExpMinus(x,E,V));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ], physics.rExpPlusPrime(x,E,V));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], physics.rExpMinusPrime(x,E,V));
+		 for (var k = 0; k < values.nRegions*2 -1; k++){
+		 }
+		}else if ( E > V ){
+		 regionsData.matrixCoefs.set([indexI, indexJ], physics.cExpPlus(x,E,V));
+		 regionsData.matrixCoefs.set([indexI, indexJ+1], physics.cExpMinus(x,E,V));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ], physics.cExpPlusPrime(x,E,V));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], physics.cExpMinusPrime(x,E,V));
 		}else{
-		regionsData.matrixCoefs.set([indexI, indexJ], 5)
-		 regionsData.matrixCoefs.set([indexI, indexJ+1], 5)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ], 6)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], 6)
+		regionsData.matrixCoefs.set([indexI, indexJ], math.complex(1,0));
+		 regionsData.matrixCoefs.set([indexI, indexJ+1], math.complex(x,0));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ], math.complex(0,0));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], math.complex(1,0));
 		}
 	}
 	function setLeftBoundaryConditions(index){
-		indexI = 2*index - 2;
-		indexJ = 2*index;
+		var indexI = 2*index -2;
+		var indexJ = 2*index;
+		var x = regionsData.boundaries[index-1];
+		var E = regionsData.energy;
+		var V = regionsData.potentials[index];
 		if (index == values.nRegions - 1){
-		regionsData.matrixCoefs.set([indexI, indexJ], 3)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ], 4)
+		regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, physics.cExpPlus(x,E,V)));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, physics.cExpPlusPrime(x,E,V)));
 		} else{
-		if (regionsData.energy < regionsData.potentials[index]){
-		 regionsData.matrixCoefs.set([indexI, indexJ], 1)
-		 regionsData.matrixCoefs.set([indexI, indexJ+1], 1)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ], 2)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], 2)
-		}else if (regionsData.energy > regionsData.potentials[index]){
-		regionsData.matrixCoefs.set([indexI, indexJ], 3)
-		 regionsData.matrixCoefs.set([indexI, indexJ+1], 3)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ], 4)
-		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], 4)
+		if ( E < V ){
+		 regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, physics.rExpPlus(x,E,V)));
+		 regionsData.matrixCoefs.set([indexI, indexJ+1], math.multiply(-1, physics.rExpMinus(x,E,V)));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, physics.rExpPlusPrime(x,E,V)));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], math.multiply(-1, physics.rExpMinusPrime(x,E,V)));
+		}else if ( E > V ){
+		 regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, physics.cExpPlus(x,E,V)));
+		 regionsData.matrixCoefs.set([indexI, indexJ+1], math.multiply(-1, physics.cExpMinus(x,E,V)));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, physics.cExpPlusPrime(x,E,V)));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], math.multiply(-1, physics.cExpMinusPrime(x,E,V)));
 		}else{
-		regionsData.matrixCoefs.set([indexI,indexJ], 5)
-		 regionsData.matrixCoefs.set([indexI,indexJ+1], 5)
-		 regionsData.matrixCoefs.set([indexI+1,indexJ], 6)
-		 regionsData.matrixCoefs.set([indexI+1,indexJ+1], 6)
+		regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, math.complex(1,0)));
+		 regionsData.matrixCoefs.set([indexI, indexJ+1], math.multiply(-1, math.complex(x,0)));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, math.complex(0,0)));
+		 regionsData.matrixCoefs.set([indexI+1, indexJ+1], math.multiply(-1, math.complex(1,0)));
 		}
 		}
 	}
+	},
+	solveCoefs: function() {
+	var invA = math.inv(this.matrixCoefs);
+	this.solutionCoefs = math.multiply(invA,this.vectorCoefs);
+	},
+	plotWaves: function() {
+	var E = this.energy;
+	var V = this.potentials[0];
+	this.pathPlot.removeSegments();
+	var newP = new Point();
+	var index = 0;
+	for (var x = values.minX; x < values.maxX; x++){
+		if ((index < values.nRegions - 1) & (x > regionsData.boundaries[index])) {
+		 
+		 index += 1;
+		 
+		}
+		V = this.potentials[index];
+		newP.x = x;
+		if (index == values.nRegions - 1){
+		newP.y = values.xAxisHeight - 10*(math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V))).re;
+		}else{
+		newP.y = values.xAxisHeight - 10*(math.add(math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V)) , math.multiply(regionsData.solutionCoefs.get([index*2+1]),regionsData.functionHandles[index*2+1](x,E,V)))).re;
+
+		//console.log((math.add(math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V)) , math.multiply(regionsData.solutionCoefs.get([index*2+1]),regionsData.functionHandles[index*2+1](x,E,V))))); 
+		//console.log('hello')
+		//console.log(regionsData.solutionCoefs.get([index*2]))
+		//console.log(regionsData.solutionCoefs.get([index*2+1]))
+		//console.log(regionsData.functionHandles[index*2](x,E,V))
+		//console.log(regionsData.functionHandles[index*2+1](x,E,V))
+		
+		}
+		console.log(newP.y)
+		this.pathPlot.add(newP);
+	}
+	
 	},
 	bindMouseEvents: function(){
 		for (i = 0; i < values.nRegions - 1; i++){
@@ -243,6 +335,7 @@ var regionsData = {
 			var newXValue = regionsData.constraintX( event.point.clone().x, temp);
 			regionsData.pathWalls[temp].segments[0].point.x = newXValue;
 			regionsData.pathWalls[temp].segments[1].point.x = newXValue;
+			regionsData.boundaries[temp] = newXValue;
 			
 			if ( temp < values.nRegions - 2){
 			regionsData.pathLeftSide[temp].segments[0].point.x = newXValue;
@@ -257,6 +350,11 @@ var regionsData = {
 
 			}
 			this.selected = true;
+			regionsData.setFunctionHandles();
+			regionsData.setMatrix();
+			regionsData.solveCoefs();
+			regionsData.plotWaves();
+			console.log(regionsData.solutionCoefs)
 		}
 		this.pathWalls[i].onMouseUp = function(event){
 			this.selected = false;
@@ -264,6 +362,8 @@ var regionsData = {
 		this.pathWalls[i].onMouseLeave = function(event){
 			this.selected = false;
 		}
+		
+		
 	}
 	for ( i = 0; i < values.nRegions - 2; i++){
 	this.pathCeilings[i].onMouseDrag = function(event){
@@ -275,8 +375,13 @@ var regionsData = {
 	
 	regionsData.pathLeftSide[temp].segments[0].point.y = newYValue;
 	regionsData.pathRightSide[temp].segments[0].point.y = newYValue;
-	regionsData.potentials[temp] = values.xAxisHeight - newYValue;
+	regionsData.potentials[temp] = (values.xAxisHeight - newYValue);
 	this.selected = true;
+	regionsData.setFunctionHandles();
+	regionsData.setMatrix();
+	regionsData.solveCoefs();
+	regionsData.plotWaves();
+	console.log(regionsData.solutionCoefs)
 	}
 	this.pathCeilings[i].onMouseOn = function(event){
 	this.selected = false;
@@ -289,9 +394,14 @@ var regionsData = {
 	this.pathEnergy.onMouseDrag = function(event){
 	this.selected = true;
 	var newEnergyPos = regionsData.constraintE(event.point.clone().y);
-	regionsData.energy = Math.round(values.xAxisHeight - newEnergyPos);
+	regionsData.energy = (values.xAxisHeight - newEnergyPos);
 	regionsData.pathEnergy.segments[0].point.y = newEnergyPos;
 	regionsData.pathEnergy.segments[1].point.y = newEnergyPos;
+	regionsData.setFunctionHandles();
+	regionsData.setMatrix();
+	regionsData.solveCoefs();
+	regionsData.plotWaves();
+	console.log(regionsData.solutionCoefs)
 	
 	}
 	this.pathEnergy.onMouseOn = function(event){
@@ -314,10 +424,13 @@ for ( i = 0; i < values.nRegions - 1; i++){
 	regionsData.pathWalls[i].bringToFront();
 }
 
+regionsData.setFunctionHandles();
 regionsData.setMatrix();
-console.log(values.walls)
-console.log(values.ceilings)
+regionsData.solveCoefs();
+regionsData.plotWaves();
 
+console.log(regionsData.matrixCoefs)
+console.log(regionsData.solutionCoefs)
 
 
 function onResize(){
