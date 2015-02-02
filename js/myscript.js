@@ -1,8 +1,10 @@
+
 var regionsSetup = {
 		nRegions: 5, // number of regions, first and last always have a potential value of zero
 		defaultLength: 0,
 		walls: [], // arrays of walls separating each region in pixels
 		ceilings: [], // height of the potential in pixels
+		regions: [],
 		randomSetup: function(){
 			// setup regions as having a random potential values
 			regionsSetup.defaultLength =  Math.round( (layout.maxX - layout.minX) / regionsSetup.nRegions );
@@ -14,6 +16,65 @@ var regionsSetup = {
 			for ( var i = 0; i < regionsSetup.nRegions-2; i++){ // there are nRegions - 2 ceilings, since first and last have zero potential
 				regionsSetup.ceilings[i] = Math.round( layout.maxY + (layout.minY - layout.maxY)*Math.random() );
 			}
+
+			regionsSetup.regions[0] = new FirstPotential(layout.xAxisHeight, regionsSetup.walls[0]);
+			for (var i = 1; i < regionsSetup.nRegions - 1 ; i++){
+				regionsSetup.regions[i] = new SquarePotential(layout.xAxisHeight, regionsSetup.walls[i-1], regionsSetup.walls[i], regionsSetup.ceilings[i-1]);
+			}
+			regionsSetup.regions[regionsSetup.nRegions - 1] = new LastPotential(layout.xAxisHeight, regionsSetup.walls[regionsSetup.nRegions - 2]);
+
+			for (var i = 0; i < regionsSetup.nRegions - 1; i++){
+				regionsSetup.regions[i].setRightNeighbor(regionsSetup.regions[i+1]);
+			}
+			for (var i = 1; i < regionsSetup.nRegions ; i++){
+				regionsSetup.regions[i].setLeftNeighbor(regionsSetup.regions[i-1]);
+			}
+		}
+};
+
+
+var layout = {
+		pathMainRect: new Path(),  // Outer rectangle
+		// padding inside outer rectangle
+		minY: 20,
+		maxY: view.viewSize.height - 20,
+		minX: 20,
+		maxX: view.viewSize.width - 20,
+		axes: new Group(),
+		xAxisHeight: ( view.viewSize.height - 20) * .7,
+		maxEnergyHeight: 75, // Max energy in pixel
+		yScale: 1000, // Overall scale of the wavefunction
+		createMainRect: function(){
+			var topLeftCorner = new Point( 0, 0 );
+			var bottomRightCorner = new Point(view.viewSize.width,view.viewSize.height);
+			var mainRect = new Rectangle(topLeftCorner,bottomRightCorner);
+			layout.pathMainRect = new Path.Rectangle(mainRect);
+			layout.pathMainRect.strokeColor = 'black';
+			layout.pathMainRect.strokeWidth = 10;	
+		},
+		createAxes: function(){
+			// yAxis 
+			var pTop = new Point( layout.minX, layout.minY );
+			var pBottom = new Point( layout.minX, layout.maxY );
+			var yAxis = new Path(pTop, pBottom);
+			// yAxis ArrowHead
+			var pYArrowLeft = pTop + { x: -5, y: 6 };
+			var pYArrowRight = pTop +{ x: 5, y: 6 };
+			var pYArrowTop = pTop + { x: 0, y: 0 };
+			var yAxisArrow = new Path(pYArrowLeft, pYArrowTop, pYArrowRight);
+			// xAxis 
+			var pLeft = new Point(layout.minX, layout.xAxisHeight);
+			var pRight = new Point( layout.maxX, layout.xAxisHeight);
+			var xAxis = new Path(pLeft,pRight);
+			// xAxis ArrowHead
+			var pXArrowTop = pRight + { x: -6, y: 5};
+			var pXArrowRight = pRight + { x: 5, y: 0};
+			var pXArrowBottom = pRight + {x: -6, y: -5};
+			var xAxisArrow = new Path(pXArrowTop, pXArrowRight, pXArrowBottom);
+			//Axes group
+			layout.axes = new Group(yAxis, yAxisArrow, xAxis, xAxisArrow);
+			layout.axes.strokeWidth = 3;
+			layout.axes.strokeColor = 'black';
 		}
 };
 
@@ -22,6 +83,12 @@ var physics = { // holds physically relevant variables and piecewise eigenfuncti
 		hbar: 100,
 		mass: 1/2,
 		lambda: 1/5,
+		matrixCoefs: math.matrix(), //Matrix to solve to find coefficients of wavefunction
+		constraintVector: [], // Vector constraint b = Ax, to find coefficients of wavefunction
+		solutionCoefs: [], // Solution vector x = Inv(A)b containing coefficients of wavefunction
+		boundState: false,
+		boundStateConstraint: math.matrix(),
+		boundStateEnergies: [],
 		rExpPlus: function(x,E,V){ // e^(k*x) when E < V
 			var xScaled = x*physics.lambda;
 			var q = math.sqrt(2*physics.mass*(V-E))/physics.hbar;
@@ -73,453 +140,770 @@ var physics = { // holds physically relevant variables and piecewise eigenfuncti
 		zero: function(x,E,V){ // Zero functions (also derivative of constant
 			var xScaled = x*physics.lambda;
 			return math.complex(0, 0);
-		}
-};
-
-
-var layout = {
-		pathMainRect: new Path(),  // Outer rectangle
-		// padding inside outer rectangle
-		maxY: 20,
-		minY: view.viewSize.height - 20,
-		minX: 20,
-		maxX: view.viewSize.width - 20,
-		axes: new Group(),
-		xAxisHeight: ( view.viewSize.height - 20) * .7,
-		maxEnergyHeight: 75, // Max energy in pixel
-		yScale: 1000, // Overall scale of the wavefunction
-		createMainRect: function(){
-			var topLeftCorner = new Point( 0, 0 );
-			var bottomRightCorner = new Point(view.viewSize.width,view.viewSize.height);
-			var mainRect = new Rectangle(topLeftCorner,bottomRightCorner);
-			layout.pathMainRect = new Path.Rectangle(mainRect);
-			layout.pathMainRect.strokeColor = 'black';
-			layout.pathMainRect.strokeWidth = 10;	
 		},
-		createAxes: function(){
-			// yAxis 
-			var pTop = new Point( layout.minX, layout.maxY );
-			var pBottom = new Point( layout.minX, layout.minY );
-			var yAxis = new Path(pTop, pBottom);
-			// yAxis ArrowHead
-			var pYArrowLeft = pTop + { x: -5, y: 6 };
-			var pYArrowRight = pTop +{ x: 5, y: 6 };
-			var pYArrowTop = pTop + { x: 0, y: 0 };
-			var yAxisArrow = new Path(pYArrowLeft, pYArrowTop, pYArrowRight);
-			// xAxis 
-			var pLeft = new Point(layout.minX, layout.xAxisHeight);
-			var pRight = new Point( layout.maxX, layout.xAxisHeight);
-			var xAxis = new Path(pLeft,pRight);
-			// xAxis ArrowHead
-			var pXArrowTop = pRight + { x: -6, y: 5};
-			var pXArrowRight = pRight + { x: 5, y: 0};
-			var pXArrowBottom = pRight + {x: -6, y: -5};
-			var xAxisArrow = new Path(pXArrowTop, pXArrowRight, pXArrowBottom);
-			//Axes group
-			layout.axes = new Group(yAxis, yAxisArrow, xAxis, xAxisArrow);
-			layout.axes.strokeWidth = 3;
-			layout.axes.strokeColor = 'black';
-		}
-};
-
-
-var regionsData = {
-		pathWalls: [], // Dashed lines corresponding to region separators
-		pathCeilings: [], // ceiling of the square potentials
-		pathLeftSide: [], // left side of the square potentials
-		pathRightSide: [], // right side
-		pathPlotComplex: new Path(), // complex wavefunction
-		pathPlotReal: new Path(), // real wavefunction
-		// coordinates of the walls and potential wells
-		pTop: [], // top of Walls
-		pBottom: [], // bottom of walls
-		pMiddleLeft: [], // top left points of potential wells
-		pMiddleRight: [], // top right points of potential wells
-		pXAxis: [], // bottom of the wells on the xAxis
-		energy: Math.random()*(layout.xAxisHeight - layout.maxEnergyHeight),
-		potentials: [], // potentials value in units of energy (not pixels)
-		boundaries: [], // boundary values along the x axis
-		// Energy line and relevant points
-		pathEnergy: new Path(), 
-		pEnergyLeft: new Point(),
-		pEnergyRight: new Point(),
-		matrixCoefs: math.zeros(regionsSetup.nRegions*2 - 1, regionsSetup.nRegions*2 - 1), //Matrix to solve to find coefficients of wavefunction
-		vectorCoefs: [], // Vector constraint b = Ax, to find coefficients of wavefunction
-		solutionCoefs: [], // Solution vector x = Inv(A)b containing coefficients of wavefunction
-		functionHandles: [], // handle representing which eigenfunction is to be plotted in a region
-		regionsGroup: new Group(),
-		createData: function(){ // Setup points
-			// Setup boundaries points
-			for (var i = 0; i < regionsSetup.nRegions-1; i++){
-				regionsData.pTop[i] = new Point( regionsSetup.walls[i], layout.minY);
-				regionsData.pBottom[i] = new Point( regionsSetup.walls[i], layout.maxY);
-				regionsData.pXAxis[i] = new Point( regionsSetup.walls[i], layout.xAxisHeight);
-				regionsData.boundaries[i] = regionsSetup.walls[i]; // along x-axis
+		minPotential: function(){
+			var minV = 0;
+			for (var i = 0; i < regionsSetup.nRegions; i++){
+				minV = Math.min(minV, regionsSetup.regions[i].potential);
 			}
-			// Setup square potentials points
-			for (var i = 0; i < regionsSetup.nRegions-2; i++){
-				regionsData.pMiddleLeft[i] = new Point( regionsSetup.walls[i], regionsSetup.ceilings[i]);
-				regionsData.pMiddleRight[i] = new Point( regionsSetup.walls[i+1], regionsSetup.ceilings[i]);
-				regionsData.potentials[i+1] = layout.xAxisHeight - regionsSetup.ceilings[i]; // in energy units
-			}
-			// First and last region always have fixed zero potential
-			regionsData.potentials[0] = 0;
-			regionsData.potentials[regionsSetup.nRegions - 1] = 0;
-			// Setup the energy points
-			regionsData.pEnergyLeft = { x: layout.minX , y: layout.xAxisHeight - regionsData.energy};
-			regionsData.pEnergyRight = { x: layout.maxX , y: layout.xAxisHeight - regionsData.energy};
-
-			// Setup constraint vector as [ 0, 0, ..., 1 ], Size is (nBoundaries*2 + 1), 
-			for (var i = 0; i < regionsSetup.nRegions*2 - 1; i++){
-				regionsData.vectorCoefs[i] = 0;
-			}
-			regionsData.vectorCoefs[regionsSetup.nRegions*2 - 2] = 1; // corresponds to setting coefficient A = 1
-
-
-
+			return minV;
 		},
-		createRegion: function(){ // create the paths for each regions
-			// Setup boundaries paths
-			for (var i = 0; i < regionsSetup.nRegions-1; i++){
-				regionsData.pathWalls[i] = new Path(regionsData.pTop[i],regionsData.pBottom[i]);
-				regionsData.regionsGroup.addChild(regionsData.pathWalls[i]);
-				regionsData.pathWalls[i].dashArray = [5,5];
-			}
-			// Setup square potentials paths
-			for (var i = 0; i < regionsSetup.nRegions-2; i++){
-				regionsData.pathCeilings[i] = new Path(regionsData.pMiddleLeft[i], regionsData.pMiddleRight[i]);
-				regionsData.pathLeftSide[i] = new Path(regionsData.pMiddleLeft[i], regionsData.pXAxis[i]);
-				regionsData.pathRightSide[i] = new Path(regionsData.pMiddleRight[i], regionsData.pXAxis[i+1]);
-
-				regionsData.regionsGroup.addChild(regionsData.pathCeilings[i]);
-				regionsData.regionsGroup.addChild(regionsData.pathLeftSide[i]);
-				regionsData.regionsGroup.addChild(regionsData.pathRightSide[i]);
-			}
-			// Add everything to group and setup strokestyle
-			regionsData.pathEnergy.add(regionsData.pEnergyLeft);
-			regionsData.pathEnergy.add(regionsData.pEnergyRight);
-			regionsData.regionsGroup.addChild(regionsData.pathEnergy);
-
-			regionsData.regionsGroup.strokeColor = 'black';
-			regionsData.regionsGroup.strokeWidth = 3;
-			regionsData.pathEnergy.strokeColor = 'blue';
-			regionsData.pathPlotComplex.strokeColor = 'red';
-			regionsData.pathPlotComplex.strokeWidth = 3;
-			regionsData.pathPlotReal.strokeColor = 'green';
-			regionsData.pathPlotReal.strokeWidth = 3;
-
-		},
-		constraintX: function( newX, temp){
-			// constrains the x coordinate of walls and domains so that they cannot be moved past neighbor domains or padding of outer-rectangle
-			var answer;
-			if ( temp == 0){
-				answer = Math.max( newX, layout.minX +5);
-			}else{
-				answer = Math.max( newX, regionsData.pathWalls[temp-1].segments[0].point.x +5);
-			}
-			if ( temp == regionsSetup.nRegions - 2){
-				answer = Math.min( answer , layout.maxX -5);
-			}else{
-				answer = Math.min( answer , regionsData.pathWalls[temp+1].segments[0].point.x -5 );
-			}
-			return answer;
-		},
-		constraintY: function( newY){
-			// constrains the y coordinates of potentials so they cannot be moved past the padding of the outer rectangle
-			var answer;
-			answer = Math.max( newY, layout.maxY );
-			answer = Math.min( answer, layout.minY );
-			return answer;
-		},
-		constraintE: function( newEpos){
-			// constrains energy line so it cannot be moved below the min and max allowed values
-			var answer;
-			answer = Math.min( newEpos, layout.xAxisHeight - 2);  // min energy is 2, prevents boundstates
-			answer = Math.max( answer, layout.maxY + 20); // max energy is 20 less than padding allows
-			return answer;
-		},
-		setFunctionHandles: function() {
-			// sets the handles for which function exists in a given region
-			for (var i = 0; i < regionsSetup.nRegions -1; i++){
-				var index = 2*i; // the basis is two dimensional because schrodinger's eq is 2nd order.
-				var E = regionsData.energy;
-				var V = regionsData.potentials[i];
-				if ( E < V ){ // real exponential when E< V
-					this.functionHandles[index] = physics.rExpPlus;
-					this.functionHandles[index+1] = physics.rExpMinus;
-				}else if ( E > V ){ // complex exponential when E > V
-					this.functionHandles[index] = physics.cExpPlus;
-					this.functionHandles[index+1] = physics.cExpMinus;
-				}else{ // linear function when E = V, (turning points)
-					this.functionHandles[index] = physics.linear;
-					this.functionHandles[index+1] = physics.constant;
+		setConstraintVector: function(){
+			var vectorSize = 0;
+			physics.constraintVector = [];
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				if (regionsSetup.regions[i].basisFunction1){
+					vectorSize += 1;
+				}
+				if (regionsSetup.regions[i].basisFunction2){
+					vectorSize += 1;
 				}
 			}
-			// Only one basis function on last domain because there can be no reflected wave
-			this.functionHandles[regionsSetup.nRegions*2 - 2] = physics.cExpPlus; 
+			//Setup constraint vector as [ 0, 0, ..., 1 ]
+			for (var i = 0; i < vectorSize - 1; i++){
+				physics.constraintVector[i] = 0;
+			}
+
+			physics.constraintVector[vectorSize - 1] = 1; // corresponds to setting coefficient A = 1
 		},
-		setMatrix: function(){
-			for (var i = 0 ; i < regionsSetup.nRegions - 1; i++ ){ // No right boundary condition for the last domain, i ends at nRegions - 2
-				setRightBoundaryConditions(i);
-			}
-			for (var i = 1 ; i < regionsSetup.nRegions ; i++ ){ // No left boundary condition for the first domain, i starts at 1
-				setLeftBoundaryConditions(i);
-			}
-
-			// constrains a linear combination of A and B, the coefficients of the eigenfunctions of the first domain
-			regionsData.matrixCoefs.set([regionsSetup.nRegions*2 - 2 , 0],1);
-			regionsData.matrixCoefs.set([regionsSetup.nRegions*2 - 2 , 1],0);
-
-			function setRightBoundaryConditions(index){ // In, A + B - C - D = 0, this sets the A + B part of the equations
-				var indexI = 2*index; // labels equations
-				var indexJ = 2*index; // labels coefficients of wavefunction
-				var x = regionsData.boundaries[index];
-				var E = regionsData.energy;
-				var V = regionsData.potentials[index];
-				
-				// TODO replace with reference to functionhandles
-				if ( E < V ){
-					// Ensure continuity at boundary
-					regionsData.matrixCoefs.set([indexI, indexJ], physics.rExpPlus(x,E,V));
-					regionsData.matrixCoefs.set([indexI, indexJ+1], physics.rExpMinus(x,E,V));
-					// Ensure differentiability at boundary
-					regionsData.matrixCoefs.set([indexI+1, indexJ], physics.rExpPlusPrime(x,E,V));
-					regionsData.matrixCoefs.set([indexI+1, indexJ+1], physics.rExpMinusPrime(x,E,V));
-					for (var k = 0; k < regionsSetup.nRegions*2 -1; k++){
-					}
-				}else if ( E > V ){
-					// Ensure continuity at boundary
-					regionsData.matrixCoefs.set([indexI, indexJ], physics.cExpPlus(x,E,V));
-					regionsData.matrixCoefs.set([indexI, indexJ+1], physics.cExpMinus(x,E,V));
-					// Ensure differentiability at boundary
-					regionsData.matrixCoefs.set([indexI+1, indexJ], physics.cExpPlusPrime(x,E,V));
-					regionsData.matrixCoefs.set([indexI+1, indexJ+1], physics.cExpMinusPrime(x,E,V));
-				}else{
-					// Ensure continuity at boundary
-					regionsData.matrixCoefs.set([indexI, indexJ], physics.linear(x,E,V));
-					regionsData.matrixCoefs.set([indexI, indexJ+1], physics.constant(x,E,V));
-					// Ensure differentiability at boundary
-					regionsData.matrixCoefs.set([indexI+1, indexJ], physics.constant(x,E,V));
-					regionsData.matrixCoefs.set([indexI+1, indexJ+1], physics.zero(x,E,V));
-				}
-			}
-			function setLeftBoundaryConditions(index){ // In, A + B - C - D = 0, this sets the -C - D part of the equations
-				var indexI = 2*index -2; // labels the equation, -2 because index starts shifted by 1
-				var indexJ = 2*index; // labels the coefficient
-				var x = regionsData.boundaries[index-1]; // -1 because index starts shifted by 1
-				var E = regionsData.energy;
-				var V = regionsData.potentials[index];
-				if (index == regionsSetup.nRegions - 1){ // last region is a special case because there is only one basis eigenfunction
-					regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, physics.cExpPlus(x,E,V)));
-					regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, physics.cExpPlusPrime(x,E,V)));
-				} else{
-					if ( E < V ){
-						// Ensure continuity at boundary
-						regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, physics.rExpPlus(x,E,V)));
-						regionsData.matrixCoefs.set([indexI, indexJ+1], math.multiply(-1, physics.rExpMinus(x,E,V)));
-						// Ensure differentiability at boundary
-						regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, physics.rExpPlusPrime(x,E,V)));
-						regionsData.matrixCoefs.set([indexI+1, indexJ+1], math.multiply(-1, physics.rExpMinusPrime(x,E,V)));
-					}else if ( E > V ){
-						// Ensure continuity at boundary
-						regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, physics.cExpPlus(x,E,V)));
-						regionsData.matrixCoefs.set([indexI, indexJ+1], math.multiply(-1, physics.cExpMinus(x,E,V)));
-						// Ensure differentiability at boundary
-						regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, physics.cExpPlusPrime(x,E,V)));
-						regionsData.matrixCoefs.set([indexI+1, indexJ+1], math.multiply(-1, physics.cExpMinusPrime(x,E,V)));
-					}else{
-						// Ensure continuity at boundary
-						regionsData.matrixCoefs.set([indexI, indexJ], math.multiply(-1, physics.linear(x,E,V)));
-						regionsData.matrixCoefs.set([indexI, indexJ+1], math.multiply(-1, physics.constant(x,E,V)));
-						// Ensure differentiability at boundary
-						regionsData.matrixCoefs.set([indexI+1, indexJ], math.multiply(-1, physics.constant(x,E,V)));
-						regionsData.matrixCoefs.set([indexI+1, indexJ+1], math.multiply(-1, physics.zero(x,E,V)));
-					}
-				}
+		setHandles: function(E){
+			for (var i = 0; i < regionsSetup.nRegions ; i++){
+				regionsSetup.regions[i].setHandles(E);
 			}
 		},
-		solveCoefs: function() { // solves b = Ax, i.e. x = inv(A)*b
-			var invA = math.inv(regionsData.matrixCoefs);
-			regionsData.solutionCoefs = math.multiply(invA,regionsData.vectorCoefs);
-		},
-		plotWaves: function() { // plots the wavefunction
-			var E = regionsData.energy;
-			var V = regionsData.potentials[0];
-			regionsData.pathPlotComplex.removeSegments();
-			regionsData.pathPlotReal.removeSegments();
-			var newPComplex = new Point();
-			var newPReal = new Point();
-			var index = 0; // index labeling regions
-			var yScale = layout.yScale; //scale everything when plotting
-			for (var x = layout.minX; x < layout.maxX; x++){
-
-				if ((index < regionsSetup.nRegions - 1) & (x > regionsData.boundaries[index])) {
-
-					index += 1; // change which region we are in when crossing a boundary
+		setMatrix: function(E){
+			var vectorSize = 0;
+			var indexI;
+			var indexJ;
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				if (regionsSetup.regions[i].basisFunction1){
+					vectorSize += 1;
 
 				}
-				V = regionsData.potentials[index];
-				newPComplex.x = x;
-				newPReal.x = x;
-				if (index == regionsSetup.nRegions - 1){
-					// last region only has one eigenfunction basis
-					newPReal.y = layout.xAxisHeight - yScale*(math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V))).re;
-					newPComplex.y = layout.xAxisHeight - yScale*(math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V))).im;
+				if (regionsSetup.regions[i].basisFunction2){
+					vectorSize += 1;
+
+				}
+
+			}
+
+			physics.matrixCoefs = math.zeros(vectorSize,vectorSize);
+
+
+			if (E > 0){
+				indexI = 0;
+				indexJ = 0;
+				for (var i = 0; i < regionsSetup.nRegions - 1; i++){
+					setRightBoundaryConditions(regionsSetup.regions[i]);
+				}
+				indexI = 0;
+				indexJ = 2;
+				for (var i = 1; i < regionsSetup.nRegions; i++){
+					setLeftBoundaryConditions(regionsSetup.regions[i]);
+				}
+			} else{
+				indexI = 0;
+				indexJ = 0;
+				for (var i = 0; i < regionsSetup.nRegions - 1; i++){
+					setRightBoundaryConditions(regionsSetup.regions[i]);
+				}
+				indexI = 0;
+				indexJ = 1;
+				for (var i = 1; i < regionsSetup.nRegions; i++){
+
+					setLeftBoundaryConditions(regionsSetup.regions[i]);
+				}
+
+
+			}
+			if (E > 0){
+				// constrains a linear combination of A and B, the coefficients of the eigenfunctions of the first domain
+				physics.matrixCoefs.set([vectorSize - 1 , 0],1);
+			}
+
+			function setRightBoundaryConditions(region){ 
+				var x = region.right;
+				var V = region.potential;
+
+				physics.matrixCoefs.set([indexI,indexJ],region.basisFunction1(x,E,V));
+				physics.matrixCoefs.set([indexI+1,indexJ],region.basisFunctionPrime1(x,E,V));
+				if ( region.basisFunction2 ){
+					physics.matrixCoefs.set([indexI,indexJ+1],region.basisFunction2(x,E,V));
+					physics.matrixCoefs.set([indexI+1,indexJ+1],region.basisFunctionPrime2(x,E,V));
+					indexI += 2;
+					indexJ += 2;
 				} else {
-					// in general there are two eigenfunctions basis
-					newPReal.y = layout.xAxisHeight - yScale*(math.add(math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V)) , 
-							math.multiply(regionsData.solutionCoefs.get([index*2+1]),regionsData.functionHandles[index*2+1](x,E,V)))).re;
-					newPComplex.y = layout.xAxisHeight - yScale*(math.add(math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V)) , 
-							math.multiply(regionsData.solutionCoefs.get([index*2+1]),regionsData.functionHandles[index*2+1](x,E,V)))).im;
+					indexI += 2;
+					indexJ += 1;
 				}
 
-				regionsData.pathPlotReal.add(newPReal);
-				regionsData.pathPlotComplex.add(newPComplex);
+			}
+			function setLeftBoundaryConditions(region){ // In, A + B - C - D = 0, this sets the -C - D part of the equations
+				var x = region.left;
+				var V = region.potential;
+
+				physics.matrixCoefs.set([indexI,indexJ],math.multiply(-1,region.basisFunction1(x,E,V)) );
+				physics.matrixCoefs.set([indexI+1,indexJ],math.multiply(-1, region.basisFunctionPrime1(x,E,V)));
+				if ( region.basisFunction2 ){
+					physics.matrixCoefs.set([indexI,indexJ+1],math.multiply(-1, region.basisFunction2(x,E,V)));
+					physics.matrixCoefs.set([indexI+1,indexJ+1],math.multiply(-1, region.basisFunctionPrime2(x,E,V)));
+					indexI += 2;
+					indexJ += 2;
+				} else {
+					indexI += 2;
+					indexJ += 1;
+				}
 			}
 		},
-		normalize: function() {
-			// normalize the wavefunction so that the integral over the whole box is 1
-			var E = regionsData.energy;
-			var V = regionsData.potentials[0];
+		normalize: function(E){
 			var integral = 0;
-			var index = 0; // start with the first region
-			var xStart = layout.minX; // integrate from minX
-			var xEnd = layout.maxX; // integrate up to maxX
-			var dx = 0.1; // break integral into rectangles of width dx
-			var x = xStart; 
-			var f1,f2 = math.complex(); // in general there are two eigenfunction to integrate
-
-			for (var i = 0; x < xEnd; i++){
-				// break the integral into regions
-				if ((index < regionsSetup.nRegions - 1) & (x > regionsData.boundaries[index])) {
-					index += 1; // move into next region once we have crossed a boundary
-				}
-				V = regionsData.potentials[index];
-				if (index == regionsSetup.nRegions - 1){ // the last domain has only one eigenfunction
-					// compute coef*eigenfunction
-					f1 = math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V));
-					integral += math.multiply(f1,math.conj(f1))*dx;
-
-				}else{ // in general there are two eigenfunctions
-					// compute coef*eigenfunction
-					f1 = math.multiply(regionsData.solutionCoefs.get([index*2]),regionsData.functionHandles[index*2](x,E,V));
-					f2 = math.multiply(regionsData.solutionCoefs.get([index*2+1]),regionsData.functionHandles[index*2+1](x,E,V));
-					integral += math.add(math.add(math.multiply(f1,math.conj(f1)) , math.multiply(f2,math.conj(f2))), math.add(math.multiply(f2,math.conj(f1)) , math.multiply(f1,math.conj(f2))))*dx;
-				}
-				x += dx; // move on to the next rectangle
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				integral += regionsSetup.regions[i].integrate(E);
 			}
-			// normalize the coefficients by the norm of the function
-			regionsData.solutionCoefs = math.divide(regionsData.solutionCoefs, Math.sqrt(integral));
+			var index = 0;
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				if (regionsSetup.regions[i].basisFunction1){
+					regionsSetup.regions[i].coef1 = math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral));
+
+					index += 1;
+
+				}
+				if (regionsSetup.regions[i].basisFunction2){
+					regionsSetup.regions[i].coef2 = math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral));
+					index += 1;
+				}
+
+			}
 
 		},
-		bindMouseEvents: function(){
-			for (var i = 0; i < regionsSetup.nRegions - 1; i++){
-				regionsData.pathWalls[i].onMouseDrag = function(event) {
-					// move potential wells as the regions walls are dragged
-					var temp = regionsData.pathWalls.indexOf(this);
-					// ensure that the new X value does not cross the outer rectangle or another region
-					var newXValue = regionsData.constraintX( event.point.clone().x, temp);
-					regionsData.pathWalls[temp].segments[0].point.x = newXValue;
-					regionsData.pathWalls[temp].segments[1].point.x = newXValue;
-					regionsData.boundaries[temp] = newXValue;
+		solveCoefs: function(E) { // solves b = Ax, i.e. x = inv(A)*b
+			var invA = null;
+			var detA = null;
+			if (E > 0){
+				invA = math.inv(physics.matrixCoefs);
+				physics.solutionCoefs = math.multiply(invA,physics.constraintVector);
+			} else {
 
-					if ( temp < regionsSetup.nRegions - 2){ // last domain doesn't have right neighbor or ceiling
-						regionsData.pathLeftSide[temp].segments[0].point.x = newXValue;
-						regionsData.pathLeftSide[temp].segments[1].point.x = newXValue;
-						regionsData.pathCeilings[temp].segments[0].point.x = newXValue;
-					}
+				for (var i = 0; i < physics.constraintVector.length; i++){
+					physics.boundStateConstraint.set([i], physics.matrixCoefs.get([physics.constraintVector.length - 1, i]));
+				}
+				//discard last row
+				for (var i = 0; i < physics.constraintVector.length; i++){
+					physics.matrixCoefs.set([physics.constraintVector.length - 1, i], 0);
+				}
+				// constrains a linear combination of A and B, the coefficients of the eigenfunctions of the first domain
+				physics.matrixCoefs.set([physics.constraintVector.length - 1 , 0],1);
+				invA = math.inv(physics.matrixCoefs);
+				physics.solutionCoefs = math.multiply(invA,physics.constraintVector);
 
-					if ( temp > 0 ){ // first domain doesn't have a left neighbor or ceiling
-						regionsData.pathRightSide[temp-1].segments[0].point.x = newXValue;
-						regionsData.pathRightSide[temp-1].segments[1].point.x = newXValue;
-						regionsData.pathCeilings[temp-1].segments[1].point.x = newXValue;
-					}
-					this.selected = true;
-					// recompute coefficients
-					regionsData.setFunctionHandles();
-					regionsData.setMatrix();
-					regionsData.solveCoefs();
-					regionsData.normalize();
-					regionsData.plotWaves();
-				};
-				regionsData.pathWalls[i].onMouseUp = function(event){
-					this.selected = false;
-				};
-				regionsData.pathWalls[i].onMouseLeave = function(event){
-					this.selected = false;
-				};
-			}
-			for ( var i = 0; i < regionsSetup.nRegions - 2; i++){
-				regionsData.pathCeilings[i].onMouseDrag = function(event){
-					var temp = regionsData.pathCeilings.indexOf(this);
-					// prevent potential from being out of bounds
-					var newYValue = regionsData.constraintY(event.point.clone().y);
-					// change the height of potential
-					regionsData.pathCeilings[temp].segments[0].point.y = newYValue;
-					regionsData.pathCeilings[temp].segments[1].point.y = newYValue;
-					// change the height of the potential's walls
-					regionsData.pathLeftSide[temp].segments[0].point.y = newYValue;
-					regionsData.pathRightSide[temp].segments[0].point.y = newYValue;
-					regionsData.potentials[temp+1] = (layout.xAxisHeight - newYValue);
-					this.selected = true;
-					// recompute coefficients
-					regionsData.setFunctionHandles();
-					regionsData.setMatrix();
-					regionsData.solveCoefs();
-					regionsData.normalize();
-					regionsData.plotWaves();
-
-
-				};
-				regionsData.pathCeilings[i].onMouseOn = function(event){
-					this.selected = false;
-				};
-				regionsData.pathCeilings[i].onMouseLeave = function(event){
-					this.selected = false;
-				};
 
 			}
-			regionsData.pathEnergy.onMouseDrag = function(event){
-				this.selected = true;
-				// prevent the energy from being out of bounds
-				var newEnergyPos = regionsData.constraintE(event.point.clone().y);
-				regionsData.energy = (layout.xAxisHeight - newEnergyPos);
-				// redraw the energy line
-				regionsData.pathEnergy.segments[0].point.y = newEnergyPos;
-				regionsData.pathEnergy.segments[1].point.y = newEnergyPos;
-				// recompute everything
-				regionsData.setFunctionHandles();
-				regionsData.setMatrix();
-				regionsData.solveCoefs();
-				regionsData.normalize();
-				regionsData.plotWaves();
 
+			var index = 0;
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				if (regionsSetup.regions[i].basisFunction1){
+					regionsSetup.regions[i].coef1 = physics.solutionCoefs.get([index]);
 
-			};
-			regionsData.pathEnergy.onMouseOn = function(event){
-				this.selected = false;
-			};
-			regionsData.pathEnergy.onMouseLeave = function(event){
-				this.selected = false;
-			};
+					index += 1;
+
+				}
+				if (regionsSetup.regions[i].basisFunction2){
+					regionsSetup.regions[i].coef2 = physics.solutionCoefs.get([index]);
+					index += 1;
+				}
+
+			}
+		},
+		findBoundStates: function(){
+
+			var Emax = 0;
+			var Emin = physics.minPotential();
+			var dE = 0.001;
+			var E = Emax;
+			var agreement = 0;
+			while(E > Emin){
+				physics.setHandles(E);
+				physics.setMatrix(E);
+				physics.setConstraintVector();
+				physics.solveCoefs(E);
+
+				agreement = math.abs(math.dot(physics.boundStateConstraint, physics.solutionCoefs));
+				console.log(agreement);
+				if (agreement < 0.1){
+					console.log('energy',E);
+				}
+				
+				E -= Math.max(dE,dE*math.log(1+1*agreement));
+			}
+		},
+		plot: function(){
+
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				regionsSetup.regions[i].plotWave();
+			}
+
+		},
+		clearGraph: function(){
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				regionsSetup.regions[i].clearGraph();
+			}
 		}
 };
 
 
-regionsSetup.randomSetup();
+function Energy(E ){
+
+	this.moveLine = function(newY){
+		newY = this.constraintE(newY);
+		this.line.segments[0].point.y = newY;
+		this.line.segments[1].point.y = newY;
+		this.energyY = newY;
+		this.energy = layout.xAxisHeight - this.energyY;
+	};
+	this.constraintE = function(newY){
+		var answer;
+		var topConstraint = layout.maxEnergyHeight; // bigger is lower, 0 is top
+		var bottomConstraint = layout.xAxisHeight; // bigger is lower, 0 is top
+		answer = Math.max( newY, topConstraint );
+		answer = Math.min( answer, bottomConstraint );
+		return answer;
+	};
+	this.init = function(){
+		this.line.strokeWidth = 5;
+		this.line.strokeColor = 'blue';
+
+		this.line.onMouseDrag = function(event){
+
+			var newYValue = event.point.y;
+			parent.moveLine(newYValue);
+			update();
+		};
+	};
+
+	var parent = this;
+	this.energyY = this.constraintE(E); 
+	this.energy = layout.xAxisHeight - this.energyY;
+	this.line = new Path([ new Point(layout.minX, this.energyY ), new Point(layout.maxX, this.energyY)]);
+	this.init();
+};
+
+function SquarePotential(xAxis,left,right,ceil){
+
+	this.setHandles = function(E){
+
+		if (E > this.potential){
+			this.basisFunction1 = physics.cExpPlus;
+			this.basisFunction2 = physics.cExpMinus;
+			this.basisFunctionPrime1 = physics.cExpPlusPrime;
+			this.basisFunctionPrime2 = physics.cExpMinusPrime;
+		} else if (E < this.potential){
+			this.basisFunction1 = physics.rExpPlus;
+			this.basisFunction2 = physics.rExpMinus;
+			this.basisFunctionPrime1 = physics.rExpPlusPrime;
+			this.basisFunctionPrime2 = physics.rExpMinusPrime;
+		} else {
+			this.basisFunction1 = physics.linear;
+			this.basisFunction2 = physics.constant;
+			this.basisFunctionPrime1 = physics.constant;
+			this.basisFunctionPrime2 = physics.zero;
+		}
+	};
+	this.integrate =  function(E) {
+		// normalize the wavefunction so that the integral over the whole box is 1
+
+		var V = this.potential;
+		var integral = 0;
+		var xStart = this.left; // integrate from minX
+		var xEnd = this.right; // integrate up to maxX
+		var dx = 0.1; // break integral into rectangles of width dx
+		var x = xStart; 
+		var f1,f2 = math.complex(); // in general there are two eigenfunction to integrate
+
+		while(x < xEnd){
+
+			f1 = math.multiply(this.coef1,this.basisFunction1(x,E,V));
+			f2 = math.multiply(this.coef2,this.basisFunction2(x,E,V));
+			integral += math.add(math.add(math.multiply(f1,math.conj(f1)) , math.multiply(f2,math.conj(f2))), math.add(math.multiply(f2,math.conj(f1)) , math.multiply(f1,math.conj(f2))))*dx;
+
+			x += dx; // move on to the next rectangle
+		}
+
+		return integral;
+
+	};
+	this.plotWave = function(){
+		var E = energy.energy;
+		var V = this.potential;
+		this.clearGraph();
+		var newPComplex = new Point();
+		var newPReal = new Point();
+		var yScale = layout.yScale; //scale everything when plotting
+		for (var x = this.left; x < this.right; x++) {
+
+			newPComplex.x = x;
+			newPReal.x = x;
+			if (this.basisFunction2){
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.add(math.multiply(this.coef1,this.basisFunction1(x,E,V)) , math.multiply(this.coef2,this.basisFunction2(x,E,V)))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.add(math.multiply(this.coef1,this.basisFunction1(x,E,V)) , math.multiply(this.coef2,this.basisFunction2(x,E,V)))).im;
+
+			} else {
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.multiply(this.coef1,this.basisFunction1(x,E,V))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.multiply(this.coef1,this.basisFunction1(x,E,V))).im;
+			}
+
+			this.pathPlotReal.add(newPReal);
+			this.pathPlotComplex.add(newPComplex);
+		}
+	};
+	this.clearGraph = function(){
+		this.pathPlotComplex.removeSegments();
+		this.pathPlotReal.removeSegments();
+	},
+	this.moveCeiling = function(newY){
+		newY = this.constraintY(newY);
+		this.ceiling.segments[0].point.y = newY;
+		this.ceiling.segments[1].point.y = newY;
+		this.leftSide.segments[1].point.y = newY;
+		this.rightSide.segments[1].point.y = newY;
+		this.top = newY;
+		this.potential = layout.xAxisHeight - this.top;
+	};
+	this.moveLeftSide = function(newX){
+		newX = Math.min(this.constraintX(newX), this.right - this.minLength);
+		this.ceiling.segments[0].point.x = newX;
+		this.leftSide.segments[0].point.x = newX;
+		this.leftSide.segments[1].point.x = newX;
+		this.left = newX;
+	};
+	this.moveRightSide = function(newX){
+		newX = Math.max(this.constraintX(newX), this.left + this.minLength);
+		this.ceiling.segments[1].point.x = newX;
+		this.rightSide.segments[0].point.x = newX;
+		this.rightSide.segments[1].point.x = newX;
+		this.right = newX;
+	};
+	this.setLeftNeighbor = function(leftNeighbor){
+		this.leftNeighbor = leftNeighbor;
+		leftNeighbor.rightNeighbor = this;
+		this.moveLeftSide(leftNeighbor.right);
+	};
+	this.setRightNeighbor = function(rightNeighbor){
+		this.rightNeighbor = rightNeighbor;
+		rightNeighbor.leftNeighbor = this;
+		this.moveRightSide(rightNeighbor.left);
+	};
+	this.constraintX = function(newX){
+		var leftConstraint;
+		var rightConstraint;
+		var answer;
+		if (this.leftNeighbor){
+			leftConstraint = this.leftNeighbor.left + this.leftNeighbor.minLength;
+		} else {
+			leftConstraint = layout.minX;
+		}
+		if (this.rightNeighbor){
+			rightConstraint = this.rightNeighbor.right - this.rightNeighbor.minLength;
+		} else {
+			rightConstraint = layout.maxX;
+		}
+
+		answer = Math.max( newX , leftConstraint );
+		answer = Math.min( answer, rightConstraint );
+		return answer;
+	};
+	this.constraintY = function(newY){
+		var answer;
+		var topConstraint = layout.minY; // bigger is lower, 0 is top
+		var bottomConstraint = layout.maxY; // bigger is lower, 0 is top
+		answer = Math.max( newY, topConstraint );
+		answer = Math.min( answer, bottomConstraint );
+		return answer;
+	};
+	this.init = function(){
+		this.leftSide.strokeWidth = 5;
+		this.leftSide.strokeColor = 'red';
+		this.rightSide.strokeWidth = 5;
+		this.rightSide.strokeColor = 'green';
+		this.ceiling.strokeWidth = 5;
+		this.ceiling.strokeColor = 'blue';
+		this.pathPlotComplex.strokeColor = 'red';
+		this.pathPlotReal.strokeColor = 'green';
+
+		this.ceiling.onMouseDrag = function(event){
+
+			var newYValue = event.point.y;
+			parent.moveCeiling(newYValue);
+
+			update();
+		};
+		this.leftSide.onMouseDrag = function(event){
+			var newXValue = event.point.x;
+			parent.moveLeftSide(newXValue);
+			if (parent.leftNeighbor){
+				parent.leftNeighbor.moveRightSide(newXValue);
+			}
+
+			update();
+		};
+		this.rightSide.onMouseDrag = function(event){
+			var newXValue = event.point.x;
+			parent.moveRightSide(newXValue);
+			if (parent.rightNeighbor){
+				parent.rightNeighbor.moveLeftSide(newXValue);
+			}
+
+			update();
+		};
+		this.setHandles(energy.energy);
+
+	};
+
+	var parent = this;
+	this.leftNeighbor = null;
+	this.rightNeighbor = null;
+	this.minLength = 10;
+	this.left = this.constraintX(left);
+	this.right = this.constraintX(right);
+	this.top = this.constraintY(ceil);
+	this.basisFunction1 = null;
+	this.basisFunction2 = null;
+	this.basisFunctionPrime1 = null;
+	this.basisFunctionPrime2 = null;
+	this.coef1 = math.complex();
+	this.coef2 = math.complex();
+	this.pathPlotComplex = new Path();
+	this.pathPlotReal = new Path();
+	this.leftSide = new Path([ new Point(this.left, xAxis ), new Point(this.left, this.top)]);
+	this.rightSide = new Path([ new Point(this.right, xAxis ), new Point(this.right, this.top)]);
+	this.ceiling = new Path([ new Point(this.left, this.top ), new Point(this.right, this.top)]);
+	this.potential = layout.xAxisHeight - this.top;
+	this.init();
+}
+
+function LastPotential(xAxis,left){
+	this.setHandles = function(E){
+		if (E > this.potential){
+			this.basisFunction1 = physics.cExpPlus;	
+			this.basisFunctionPrime1 = physics.cExpPlusPrime;
+			this.basisFunction2 = null;
+			this.basisFunctionPrime2 = null;
+
+		} else if (E < this.potential){
+
+			this.basisFunction1 = physics.rExpMinus;
+			this.basisFunctionPrime1 = physics.rExpMinusPrime;
+			this.basisFunction2 = null;
+			this.basisFunctionPrime2 = null;
+		} else {
+			this.basisFunction1 = physics.constant;
+			this.basisFunctionPrime1 = physics.zero;
+			this.basisFunction2 = null;
+			this.basisFunctionPrime2 = null;
+		}
+	};
+	this.integrate =  function(E) {
+		// normalize the wavefunction so that the integral over the whole box is 1
+
+		var V = this.potential;
+		var integral = 0;
+		var xStart = this.left; // integrate from minX
+		var xEnd = this.right; // integrate up to maxX
+		var dx = 0.1; // break integral into rectangles of width dx
+		var x = xStart; 
+		var f1,f2 = math.complex(); // in general there are two eigenfunction to integrate
+
+		while( x < xEnd){
+
+			f1 = math.multiply(this.coef1,this.basisFunction1(x,E,V));
+
+			if (this.basisFunction2){
+				f2 = math.multiply(this.coef2,this.basisFunction2(x,E,V));
+				integral += math.add(math.add(math.multiply(f1,math.conj(f1)) , math.multiply(f2,math.conj(f2))), math.add(math.multiply(f2,math.conj(f1)) , math.multiply(f1,math.conj(f2))))*dx;
+			} else {
+				integral += math.multiply(f1,math.conj(f1))*dx;
+			}
+			x += dx; // move on to the next rectangle
+		}
+
+		return integral;
+
+	};
+	this.plotWave = function(){
+		var E = energy.energy;
+		var V = this.potential;
+		this.clearGraph();
+		var newPComplex = new Point();
+		var newPReal = new Point();
+		var yScale = layout.yScale; //scale everything when plotting
+		for (var x = this.left; x < this.right; x++){
+
+			newPComplex.x = x;
+			newPReal.x = x;
+			if (this.basisFunction2){
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.add(math.multiply(this.coef1,this.basisFunction1(x,E,V)) , math.multiply(this.coef2,this.basisFunction2(x,E,V)))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.add(math.multiply(this.coef1,this.basisFunction1(x,E,V)) , math.multiply(this.coef2,this.basisFunction2(x,E,V)))).im;
+
+			} else {
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.multiply(this.coef1,this.basisFunction1(x,E,V))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.multiply(this.coef1,this.basisFunction1(x,E,V))).im;
+			}
+
+			this.pathPlotReal.add(newPReal);
+			this.pathPlotComplex.add(newPComplex);
+		}
+	};
+	this.clearGraph = function(){
+		this.pathPlotComplex.removeSegments();
+		this.pathPlotReal.removeSegments();
+	},
+	this.moveLeftSide = function(newX){
+		newX = Math.min(this.constraintX(newX), this.right - this.minLength);
+		this.ceiling.segments[0].point.x = newX;
+		this.leftSide.segments[0].point.x = newX;
+		this.leftSide.segments[1].point.x = newX;
+		this.left = newX;
+	};
+
+	this.setLeftNeighbor = function(leftNeighbor){
+		this.leftNeighbor = leftNeighbor;
+		leftNeighbor.rightNeighbor = this;
+		this.moveLeftSide(leftNeighbor.right);
+	};
+
+	this.constraintX = function(newX){
+		var leftConstraint = 0;
+		var rightConstraint = 0;
+		var answer = 0;
+		if (this.leftNeighbor){
+			leftConstraint = this.leftNeighbor.left + this.leftNeighbor.minLength;
+		} else {
+			leftConstraint = layout.minX;
+		}
+		rightConstraint = layout.maxX;
+
+
+		answer = Math.max( newX , leftConstraint );
+		answer = Math.min( answer, rightConstraint );
+		return answer;
+	};
+	this.init = function(){
+		this.leftSide.strokeWidth = 5;
+		this.leftSide.strokeColor = 'red';
+		this.rightSide.strokeWidth = 5;
+		this.rightSide.strokeColor = 'green';
+		this.ceiling.strokeWidth = 5;
+		this.ceiling.strokeColor = 'blue';
+		this.pathPlotComplex.strokeColor = 'red';
+		this.pathPlotReal.strokeColor = 'green';
+
+		this.leftSide.onMouseDrag = function(event){
+			var newXValue = event.point.x;
+			parent.moveLeftSide(newXValue);
+			if (parent.leftNeighbor){
+				parent.leftNeighbor.moveRightSide(newXValue);
+			}
+			update();
+
+		};
+		this.setHandles(energy.energy);
+
+	};
+	var parent = this;
+	this.leftNeighbor = null;
+	this.minLength = 10;
+	this.left = this.constraintX(left);
+	this.right = layout.maxX;
+	this.top = xAxis;
+	this.basisFunction1 = null;
+	this.basisFunctionPrime1 = null;
+	this.basisFunction2 = null;
+	this.basisFunctionPrime2 = null;
+	this.coef1 = math.complex();
+	this.coef2 = math.complex();
+	this.pathPlotComplex = new Path();
+	this.pathPlotReal = new Path();
+	this.leftSide = new Path([ new Point(this.left, xAxis ), new Point(this.left, this.top)]);
+	this.rightSide = new Path([ new Point(this.right, xAxis ), new Point(this.right, this.top)]);
+	this.ceiling = new Path([ new Point(this.left, this.top ), new Point(this.right, this.top)]);
+	this.potential = 0;
+	this.init();
+}
+
+function FirstPotential(xAxis, right){
+
+	this.setHandles = function(E){
+		if (E > this.potential){
+			this.basisFunction1 = physics.cExpPlus;
+			this.basisFunction2 = physics.cExpMinus;
+			this.basisFunctionPrime1 = physics.cExpPlusPrime;
+			this.basisFunctionPrime2 = physics.cExpMinusPrime;
+		} else if (E < this.potential){
+			this.basisFunction1 = physics.rExpPlus;
+			this.basisFunctionPrime1 = physics.rExpPlusPrime;
+			this.basisFunction2 = null;
+			this.basisFunctionPrime2 = null;
+
+		} else {
+			this.basisFunction1 = physics.constant;
+			this.basisFunctionPrime1 = physics.zero;
+			this.basisFunction2 = null;
+			this.basisFunctionPrime2 = null;
+		}
+	};
+	this.integrate =  function(E) {
+		// normalize the wavefunction so that the integral over the whole box is 1
+
+		var V = this.potential;
+		var integral = 0;
+		var xStart = this.left; // integrate from minX
+		var xEnd = this.right; // integrate up to maxX
+		var dx = 0.1; // break integral into rectangles of width dx
+		var x = xStart; 
+		var f1,f2 = math.complex(); // in general there are two eigenfunction to integrate
+
+		while ( x < xEnd){
+
+			f1 = math.multiply(this.coef1,this.basisFunction1(x,E,V));
+			if (this.basisFunction2){
+				f2 = math.multiply(this.coef2,this.basisFunction2(x,E,V));
+				integral += math.add(math.add(math.multiply(f1,math.conj(f1)) , math.multiply(f2,math.conj(f2))), math.add(math.multiply(f2,math.conj(f1)) , math.multiply(f1,math.conj(f2))))*dx;
+			} else {
+				integral += math.multiply(f1,math.conj(f1))*dx;
+			}
+			x += dx; // move on to the next rectangle
+		}
+
+		return integral;
+
+	};
+	this.plotWave = function(){
+		var E = energy.energy;
+		var V = this.potential;
+		this.clearGraph();
+		var newPComplex = new Point();
+		var newPReal = new Point();
+		var yScale = layout.yScale; //scale everything when plotting
+		for (var x = this.left; x < this.right; x++){
+
+			newPComplex.x = x;
+			newPReal.x = x;
+			if (this.basisFunction2){
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.add(math.multiply(this.coef1,this.basisFunction1(x,E,V)) , 
+						math.multiply(this.coef2,this.basisFunction2(x,E,V)))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.add(math.multiply(this.coef1,this.basisFunction1(x,E,V)) , 
+						math.multiply(this.coef2,this.basisFunction2(x,E,V)))).im;
+
+			} else {
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.multiply(this.coef1,this.basisFunction1(x,E,V))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.multiply(this.coef1,this.basisFunction1(x,E,V))).im;
+			}
+
+			this.pathPlotReal.add(newPReal);
+			this.pathPlotComplex.add(newPComplex);
+		}
+	};
+	this.clearGraph = function(){
+		this.pathPlotComplex.removeSegments();
+		this.pathPlotReal.removeSegments();
+	},
+	this.moveRightSide = function(newX){
+		newX = Math.max(this.constraintX(newX), this.left + this.minLength);
+		this.ceiling.segments[1].point.x = newX;
+		this.rightSide.segments[0].point.x = newX;
+		this.rightSide.segments[1].point.x = newX;
+		this.right = newX;
+	};
+	this.setRightNeighbor = function(rightNeighbor){
+		this.rightNeighbor = rightNeighbor;
+		rightNeighbor.leftNeighbor = this;
+		this.moveRightSide(rightNeighbor.left);
+	};
+	this.constraintX = function(newX){
+		var leftConstraint = 0;
+		var rightConstraint = 0;
+		var answer = 0;
+		leftConstraint = layout.minX;
+		if (this.rightNeighbor){
+			rightConstraint = this.rightNeighbor.right - this.rightNeighbor.minLength;
+		} else {
+			rightConstraint = layout.maxX;
+		}
+
+		answer = Math.max( newX , leftConstraint );
+		answer = Math.min( answer, rightConstraint );
+		return answer;
+	};
+	this.init = function(){
+		this.leftSide.strokeWidth = 5;
+		this.leftSide.strokeColor = 'red';
+		this.rightSide.strokeWidth = 5;
+		this.rightSide.strokeColor = 'green';
+		this.ceiling.strokeWidth = 5;
+		this.ceiling.strokeColor = 'blue';
+		this.pathPlotComplex.strokeColor = 'red';
+		this.pathPlotReal.strokeColor = 'green';
+
+
+		this.rightSide.onMouseDrag = function(event){
+			var newXValue = event.point.x;
+			parent.moveRightSide(newXValue);
+			if (parent.rightNeighbor){
+				parent.rightNeighbor.moveLeftSide(newXValue);
+			}
+			update();
+		};
+		this.setHandles(energy.energy);
+
+	};
+	var parent = this;
+	this.rightNeighbor = null;
+	this.minLength = 10;
+	this.left = layout.minX;
+	this.right = this.constraintX(right);
+	this.top = xAxis;
+	this.basisFunction1 = null;
+	this.basisFunctionPrime1 = null;
+	this.basisFunction2 = null;
+	this.basisFunctionPrime2 = null;
+	this.coef1 = math.complex();
+	this.coef2 = math.complex();
+	this.pathPlotComplex = new Path();
+	this.pathPlotReal = new Path();
+	this.leftSide = new Path([ new Point(this.left, xAxis ), new Point(this.left, this.top)]);
+	this.rightSide = new Path([ new Point(this.right, xAxis ), new Point(this.right, this.top)]);
+	this.ceiling = new Path([ new Point(this.left, this.top ), new Point(this.right, this.top)]);
+	this.potential = 0;
+	this.init();
+}
+
+function onMouseMove(event) {
+	project.activeLayer.selected = false;
+	if (event.item)
+		event.item.selected = true;
+}
+
 layout.createMainRect();
 layout.createAxes();
-regionsData.createData();
-regionsData.createRegion();
 layout.axes.sendToBack();
-for (var i = 0; i < regionsSetup.nRegions - 1; i++){
-	regionsData.pathWalls[i].bringToFront();
+energy = new Energy(250);
+regionsSetup.randomSetup();
+update();
+
+function update(){
+	physics.setHandles( energy.energy)
+	physics.setMatrix(energy.energy);
+	physics.setConstraintVector();
+	physics.solveCoefs(energy.energy);
+	physics.normalize(energy.energy);
+	physics.plot();
+
 }
-regionsData.bindMouseEvents();
 
-regionsData.setFunctionHandles();
-regionsData.setMatrix();
-regionsData.solveCoefs();
-regionsData.normalize();
-regionsData.plotWaves();
 
+//physics.findBoundStates();
