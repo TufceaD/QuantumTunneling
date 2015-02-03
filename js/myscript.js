@@ -44,6 +44,7 @@ var layout = {
 		xAxisHeight: ( view.viewSize.height - 20) * .7,
 		maxEnergyHeight: 75, // Max energy in pixel
 		yScale: 1000, // Overall scale of the wavefunction
+		boundStateArrows: [],
 		createMainRect: function(){
 			var topLeftCorner = new Point( 0, 0 );
 			var bottomRightCorner = new Point(view.viewSize.width,view.viewSize.height);
@@ -51,6 +52,19 @@ var layout = {
 			layout.pathMainRect = new Path.Rectangle(mainRect);
 			layout.pathMainRect.strokeColor = 'black';
 			layout.pathMainRect.strokeWidth = 10;	
+		},
+		createArrows: function(){
+			
+			for (var i= 0; i < layout.boundStateArrows.length; i++){
+				
+			
+			layout.boundStateArrows[i].destroy();
+			
+			}
+			console.log('bound state energies are', physics.boundStateEnergies);
+			for (var i = 0; i < physics.boundStateEnergies.length; i++){
+				layout.boundStateArrows[i] = new Arrow(layout.minX - 1, layout.xAxisHeight - physics.boundStateEnergies[i]);
+			}
 		},
 		createAxes: function(){
 			// yAxis 
@@ -379,10 +393,10 @@ var physics = { // holds physically relevant variables and piecewise eigenfuncti
 						boundStateAgreement[0] = agreement;
 						countBoundState += 1;
 					}else {
-						if ((Math.abs(physics.boundStateEnergies[countBoundState- 1] - E) < 2) & (agreement < boundStateAgreement[countBoundState-1])){
+						if ((Math.abs(physics.boundStateEnergies[countBoundState- 1] - E) < 3) & (agreement < boundStateAgreement[countBoundState-1])){
 							physics.boundStateEnergies[countBoundState - 1] = E;
 							boundStateAgreement[countBoundState - 1] = agreement;
-						} else if (Math.abs(physics.boundStateEnergies[countBoundState- 1] - E) > 2 ){
+						} else if (Math.abs(physics.boundStateEnergies[countBoundState- 1] - E) > 3 ){
 							physics.boundStateEnergies[countBoundState] = E;
 							boundStateAgreement[countBoundState] = agreement;
 							countBoundState += 1;
@@ -402,9 +416,7 @@ var physics = { // holds physically relevant variables and piecewise eigenfuncti
 
 				count += 1;
 			}	
-			console.log('loop ran', count);
-			console.log('energies', physics.boundStateEnergies);
-			console.log('agreements', boundStateAgreement);
+			
 			function checkConstraint(E){
 				physics.setHandles(E);
 				physics.setMatrix(E);
@@ -504,6 +516,8 @@ function Energy(E ){
 				}
 			}
 		};
+		
+		
 	};
 
 	var parent = this;
@@ -694,17 +708,19 @@ function SquarePotential(xAxis,left,right,ceil){
 
 		};
 
+		
 		this.leftSide.onMouseUp = function(event){
 			updateBoundStates();
 			update();
 
 		};
-
+		
 		this.ceiling.onMouseUp = function(event){
 			updateBoundStates();
 			update();
 
 		};
+		
 		this.setHandles(energy.energy);
 
 	};
@@ -864,6 +880,7 @@ function LastPotential(xAxis,left){
 			update();
 
 		};
+		
 		this.setHandles(energy.energy);
 
 	};
@@ -1021,6 +1038,7 @@ function FirstPotential(xAxis, right){
 			update();
 
 		};
+		
 		this.setHandles(energy.energy);
 
 	};
@@ -1073,5 +1091,34 @@ function update(){
 
 function updateBoundStates(){
 	physics.findBoundStates();
-
+	layout.createArrows();
 }
+
+function Arrow(x,y){
+
+	this.init = function(){
+		
+		// ArrowHead
+		var pArrowTop = this.pHead + { x: -7, y: 5};
+		var pArrowHead = this.pHead + { x: 0, y: 0};
+		var pArrowBottom = this.pHead + {x: -7, y: -5};
+		this.arrow = new Path(pArrowTop, pArrowHead, pArrowBottom);
+		//Axes group
+		
+		this.arrow.strokeWidth = 4;
+		this.arrow.strokeColor = 'blue';
+	};
+	this.destroy = function(){
+		this.arrow.remove();
+		this.pHead = null;
+		this.pTop = null;
+		this.pBottom = null;
+		this.init = null;
+	}
+	this.arrow = new Path();
+	this.pHead = new Point(x,y);
+	this.pTop = new Point();
+	this.pBottom = new Point();
+	this.init();
+}
+
