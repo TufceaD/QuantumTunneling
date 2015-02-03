@@ -264,12 +264,48 @@ var physics = { // holds physically relevant variables and piecewise eigenfuncti
 			for (var i = 0; i < regionsSetup.nRegions; i++ ){
 				if (regionsSetup.regions[i].basisFunction1){
 					regionsSetup.regions[i].coef1 = math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral));
-
+					physics.solutionCoefs.set([index],math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral)));
 					index += 1;
 
 				}
 				if (regionsSetup.regions[i].basisFunction2){
 					regionsSetup.regions[i].coef2 = math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral));
+					physics.solutionCoefs.set([index],math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral)));
+					index += 1;
+				}
+
+			}
+
+		},
+		softNormalize: function(E){
+			var integral = 0;
+
+			var index = 0;
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				if (regionsSetup.regions[i].basisFunction1){
+					integral += math.abs(physics.solutionCoefs.get([index]));
+					index += 1;
+
+				}
+				if (regionsSetup.regions[i].basisFunction2){
+					regionsSetup.regions[i].coef2 = math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral));
+					integral += math.abs(physics.solutionCoefs.get([index]));
+					index += 1;
+				}
+
+			}
+
+			var index = 0;
+			for (var i = 0; i < regionsSetup.nRegions; i++ ){
+				if (regionsSetup.regions[i].basisFunction1){
+					regionsSetup.regions[i].coef1 = math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral));
+					physics.solutionCoefs.set([index],math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral)));
+					index += 1;
+
+				}
+				if (regionsSetup.regions[i].basisFunction2){
+					regionsSetup.regions[i].coef2 = math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral));
+					physics.solutionCoefs.set([index],math.divide(physics.solutionCoefs.get([index]), Math.sqrt(integral)));
 					index += 1;
 				}
 
@@ -314,32 +350,94 @@ var physics = { // holds physically relevant variables and piecewise eigenfuncti
 
 			}
 		},
+
 		findBoundStates: function(){
 
 			var Emax = 0;
 			var Emin = physics.minPotential();
-			var dE = 0.001;
 			var E = Emax;
+			var deltaE = Emax - Emin;
+			var dE = 0.1*deltaE/(layout.maxY - layout.xAxisHeight);
+			var interactivedE = dE;
 			var agreement = 0;
+			var dAgreement = 0;
+			var count = 0;
+			var countBoundState = 0;
+			var boundStateAgreement = [];
+			physics.boundStateEnergies = [];
+
+
 			while(E > Emin){
+
+				dAgreement = agreement;	
+				checkConstraint(E);
+				dAgreement = Math.min(3000,(agreement - dAgreement)/interactivedE);
+
+				if (agreement < 0.05){
+					if (countBoundState == 0){
+						physics.boundStateEnergies[0] = E;
+						boundStateAgreement[0] = agreement;
+						countBoundState += 1;
+					}else {
+						if ((Math.abs(physics.boundStateEnergies[countBoundState- 1] - E) < 2) & (agreement < boundStateAgreement[countBoundState-1])){
+							physics.boundStateEnergies[countBoundState - 1] = E;
+							boundStateAgreement[countBoundState - 1] = agreement;
+						} else if (Math.abs(physics.boundStateEnergies[countBoundState- 1] - E) > 2 ){
+							physics.boundStateEnergies[countBoundState] = E;
+							boundStateAgreement[countBoundState] = agreement;
+							countBoundState += 1;
+						}
+					}
+				}
+
+
+				if (dAgreement < 0){
+					interactivedE = Math.max(dE/25, Math.min(0.25, dE*math.abs(agreement)/5));
+
+				} else {
+					interactivedE = Math.max(dE, Math.min(0.25, dE*agreement));
+				}
+
+				E -= interactivedE;
+
+				count += 1;
+			}	
+			console.log('loop ran', count);
+			console.log('energies', physics.boundStateEnergies);
+			console.log('agreements', boundStateAgreement);
+			function checkConstraint(E){
 				physics.setHandles(E);
 				physics.setMatrix(E);
 				physics.setConstraintVector();
 				physics.solveCoefs(E);
-
-				agreement = math.abs(math.dot(physics.boundStateConstraint, physics.solutionCoefs));
-				console.log(agreement);
-				if (agreement < 0.1){
-					console.log('energy',E);
-				}
-				
-				E -= Math.max(dE,dE*math.log(1+1*agreement));
+				physics.softNormalize();
+				agreement = 1000*math.abs(math.dot(physics.boundStateConstraint, physics.solutionCoefs));
 			}
 		},
-		plot: function(){
+		plot: function(E){
 
-			for (var i = 0; i < regionsSetup.nRegions; i++ ){
-				regionsSetup.regions[i].plotWave();
+			if (E > 0) {
+				for (var i = 0; i < regionsSetup.nRegions; i++ ){
+					regionsSetup.regions[i].plotWave(E);
+				}
+			}
+
+			if (E < 0) {
+				physics.clearGraph();
+				var isAllowedEnergy = false;
+				for (var i = 0; i < physics.boundStateEnergies.length; i++){
+					if ( math.abs(physics.boundStateEnergies[i] - E) < .1) {
+						isAllowedEnergy = true;
+					}
+				}
+
+				if (isAllowedEnergy){
+					for (var i = 0; i < regionsSetup.nRegions; i++ ){
+						regionsSetup.regions[i].plotWave(E);
+					}
+				} else {
+
+				}
 			}
 
 		},
@@ -363,7 +461,7 @@ function Energy(E ){
 	this.constraintE = function(newY){
 		var answer;
 		var topConstraint = layout.maxEnergyHeight; // bigger is lower, 0 is top
-		var bottomConstraint = layout.xAxisHeight; // bigger is lower, 0 is top
+		var bottomConstraint = layout.maxY; // bigger is lower, 0 is top
 		answer = Math.max( newY, topConstraint );
 		answer = Math.min( answer, bottomConstraint );
 		return answer;
@@ -375,8 +473,36 @@ function Energy(E ){
 		this.line.onMouseDrag = function(event){
 
 			var newYValue = event.point.y;
-			parent.moveLine(newYValue);
-			update();
+			var newE = layout.xAxisHeight - newYValue;
+			if (newE > 0){
+				parent.moveLine(newYValue);
+				update();
+			}else{
+				parent.moveLine(newYValue);
+				update();
+			}
+		};
+		this.line.onMouseUp = function(event){
+			var newYValue = event.point.y;
+			var newE = layout.xAxisHeight - newYValue;
+			var index = -1;
+			if (newE < 0){
+
+
+				for (var i = 0; i < physics.boundStateEnergies.length ; i++){
+					if (newE < physics.boundStateEnergies[i]){
+						index += 1;
+					}
+				}
+
+				if (index == -1){
+					parent.moveLine(layout.xAxisHeight - 0.1);
+					update();
+				} else{
+					parent.moveLine(layout.xAxisHeight - physics.boundStateEnergies[index] );
+					update();
+				}
+			}
 		};
 	};
 
@@ -431,8 +557,7 @@ function SquarePotential(xAxis,left,right,ceil){
 		return integral;
 
 	};
-	this.plotWave = function(){
-		var E = energy.energy;
+	this.plotWave = function(E){
 		var V = this.potential;
 		this.clearGraph();
 		var newPComplex = new Point();
@@ -536,7 +661,9 @@ function SquarePotential(xAxis,left,right,ceil){
 			var newYValue = event.point.y;
 			parent.moveCeiling(newYValue);
 
-			update();
+			if (energy.energy > 0){
+				update();
+			}
 		};
 		this.leftSide.onMouseDrag = function(event){
 			var newXValue = event.point.x;
@@ -545,7 +672,9 @@ function SquarePotential(xAxis,left,right,ceil){
 				parent.leftNeighbor.moveRightSide(newXValue);
 			}
 
-			update();
+			if (energy.energy > 0){
+				update();
+			}
 		};
 		this.rightSide.onMouseDrag = function(event){
 			var newXValue = event.point.x;
@@ -554,7 +683,27 @@ function SquarePotential(xAxis,left,right,ceil){
 				parent.rightNeighbor.moveLeftSide(newXValue);
 			}
 
+			if (energy.energy > 0){
+				update();
+			}
+		};
+
+		this.rightSide.onMouseUp = function(event){
+			updateBoundStates();
 			update();
+
+		};
+
+		this.leftSide.onMouseUp = function(event){
+			updateBoundStates();
+			update();
+
+		};
+
+		this.ceiling.onMouseUp = function(event){
+			updateBoundStates();
+			update();
+
 		};
 		this.setHandles(energy.energy);
 
@@ -630,8 +779,8 @@ function LastPotential(xAxis,left){
 		return integral;
 
 	};
-	this.plotWave = function(){
-		var E = energy.energy;
+	this.plotWave = function(E){
+
 		var V = this.potential;
 		this.clearGraph();
 		var newPComplex = new Point();
@@ -706,6 +855,12 @@ function LastPotential(xAxis,left){
 			if (parent.leftNeighbor){
 				parent.leftNeighbor.moveRightSide(newXValue);
 			}
+			if (energy.energy > 0){
+				update();
+			}
+		};
+		this.leftSide.onMouseUp = function(event){
+			updateBoundStates();
 			update();
 
 		};
@@ -780,8 +935,8 @@ function FirstPotential(xAxis, right){
 		return integral;
 
 	};
-	this.plotWave = function(){
-		var E = energy.energy;
+	this.plotWave = function(E){
+
 		var V = this.potential;
 		this.clearGraph();
 		var newPComplex = new Point();
@@ -856,7 +1011,15 @@ function FirstPotential(xAxis, right){
 			if (parent.rightNeighbor){
 				parent.rightNeighbor.moveLeftSide(newXValue);
 			}
+			if (energy.energy > 0){
+				update();
+			}
+		};
+
+		this.rightSide.onMouseUp = function(event){
+			updateBoundStates();
 			update();
+
 		};
 		this.setHandles(energy.energy);
 
@@ -894,16 +1057,21 @@ layout.axes.sendToBack();
 energy = new Energy(250);
 regionsSetup.randomSetup();
 update();
+updateBoundStates();
 
 function update(){
-	physics.setHandles( energy.energy)
-	physics.setMatrix(energy.energy);
+	var E = energy.energy;
+
+	physics.setHandles( E)
+	physics.setMatrix(E);
 	physics.setConstraintVector();
-	physics.solveCoefs(energy.energy);
-	physics.normalize(energy.energy);
-	physics.plot();
+	physics.solveCoefs(E);
+	physics.normalize(E);
+	physics.plot(E);
 
 }
 
+function updateBoundStates(){
+	physics.findBoundStates();
 
-//physics.findBoundStates();
+}
