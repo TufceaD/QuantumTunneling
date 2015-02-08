@@ -57,7 +57,7 @@ var layout = {
 
 
 var regionsSetup = { // Stores the regions and methods to create preset regions
-		nRegions: 10, // number of regions, first and last always have a potential value of zero
+		nRegions: 5, // number of regions, first and last always have a potential value of zero
 		defaultLength: 0,
 		walls: [], // arrays of walls separating each region in pixels
 		ceilings: [], // height of the potential in pixels
@@ -338,7 +338,7 @@ var solver = {
 			var integral = 0;
 			var xStart = region.left; // integrate from minX
 			var xEnd = region.right; // integrate up to maxX
-			var dx = 0.1; // break integral into rectangles of width dx
+			var dx = 1; // break integral into rectangles of width dx
 			var x = xStart; 
 			var f1,f2 = math.complex(); // in general there are two eigenfunction to integrate
 
@@ -545,7 +545,7 @@ var plotter = {
 			var newPComplex = new Point();
 			var newPReal = new Point();
 			var yScale = layout.yScale; //scale everything when plotting
-			for (var x = region.left; x < region.right; x++) {
+			for (var x = region.left; x < region.right; x = x + 5) {
 
 				newPComplex.x = x;
 				newPReal.x = x;
@@ -564,6 +564,23 @@ var plotter = {
 				region.pathPlotComplex.add(newPComplex);
 			}
 
+			// Add a point at the right endpoint too
+			x = region.right;
+			newPComplex.x = x;
+			newPReal.x = x;
+			if (region.basisFunction2){
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.add(math.multiply(region.coef1,region.basisFunction1(x,E,V)) , math.multiply(region.coef2,region.basisFunction2(x,E,V)))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.add(math.multiply(region.coef1,region.basisFunction1(x,E,V)) , math.multiply(region.coef2,region.basisFunction2(x,E,V)))).im;
+
+			} else {
+
+				newPReal.y = layout.xAxisHeight - yScale*(math.multiply(region.coef1,region.basisFunction1(x,E,V))).re;
+				newPComplex.y = layout.xAxisHeight - yScale*(math.multiply(region.coef1,region.basisFunction1(x,E,V))).im;
+			}
+
+			region.pathPlotReal.add(newPReal);
+			region.pathPlotComplex.add(newPComplex);
 
 		},
 		clearRegion: function(region){
