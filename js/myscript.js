@@ -52,6 +52,9 @@ var layout = {
 			layout.axes.strokeWidth = 3;
 			layout.axes.strokeColor = 'black';
 			layout.layer.addChild(layout.axes);
+		},
+		resize: function(){
+			
 		}
 };
 
@@ -101,7 +104,7 @@ var regionsSetup = { // Stores the regions and methods to create preset regions
 			for ( var i = 0; i < regionsSetup.nRegions-2; i++){ // there are nRegions - 2 ceilings, since first and last have zero potential
 				x = regionsSetup.walls[i] - regionsSetup.defaultLength*.5;
 				regionsSetup.ceilings[i] = circleYCoord(x, circleRadius, circleCenterX);
-				
+
 			}
 
 			// First region has zero potential 
@@ -119,7 +122,7 @@ var regionsSetup = { // Stores the regions and methods to create preset regions
 			for (var i = 1; i < regionsSetup.nRegions ; i++){
 				regionsSetup.regions[i].setLeftNeighbor(regionsSetup.regions[i-1]);
 			}
-			
+
 			function circleYCoord(x, circleRadius, circleCenterX){ //returns the Y coordinate of the circle
 				var yCoord = math.sqrt( math.pow(circleRadius,2) - math.pow(x + circleCenterX,2)/3 );
 				if (math.im(yCoord)){
@@ -127,7 +130,7 @@ var regionsSetup = { // Stores the regions and methods to create preset regions
 				} else {
 					return layout.xAxisHeight - yCoord;
 				}
-				
+
 			};
 		}
 };
@@ -289,7 +292,7 @@ var solver = {
 				}
 				// constrains a linear combination of A and B, the coefficients of the eigenfunctions of the first domain
 				solver.matrixCoefs.set([solver.constraintVector.length - 1 , 0],1);
-				
+
 			}
 
 			function setRightBoundaryConditions(region){ // In, A + B - C - D = 0, this sets the A + B part of the equations
@@ -333,7 +336,7 @@ var solver = {
 		integrateRegion:  function(region, E) { 
 			// normalize the wavefunction so that the integral over the whole box is 1
 			// the function handles have already been set, make sure the right energy was passed
-			
+
 			var V = region.potential;
 			var integral = 0;
 			var xStart = region.left; // integrate from minX
@@ -367,7 +370,7 @@ var solver = {
 
 				integral += solver.integrateRegion(regionsSetup.regions[i], E);
 			}
-			
+
 			// Sets the normalized coefficients 
 			var index = 0;
 			for (var i = 0; i < regionsSetup.nRegions; i++ ){
@@ -424,11 +427,11 @@ var solver = {
 		},
 		solveCoefs: function(E) { // solves b = Ax, i.e. x = inv(A)*b
 			var invA = null;
-			
+
 			//compute the coefficients
 			invA = math.inv(solver.matrixCoefs);
 			solver.solutionCoefs = math.multiply(invA,solver.constraintVector);
-			
+
 			// store the coefficients
 			var index = 0;
 			for (var i = 0; i < regionsSetup.nRegions; i++ ){
@@ -511,7 +514,7 @@ var solver = {
 
 };
 var plotter = {
-		layer: new Layer,
+		layer: new Layer(),
 		plot: function(E){
 
 			if (E > 0) { // Plots scattering
@@ -592,8 +595,12 @@ var plotter = {
 			for (var i = 0; i < regionsSetup.nRegions; i++ ){
 				plotter.clearRegion(regionsSetup.regions[i]);
 			}
+		},
+		resize: function(){
+
 		}
 };
+
 
 layout.createMainRect();
 layout.createAxes();
@@ -629,6 +636,9 @@ function Energy(E ){
 	this.line.strokeWidth = 5;
 	this.line.strokeColor = 'red';
 	plotter.layer.addChild(this.line);
+	this.line.selectable = true;
+	this.line.draggable_ns = true;
+
 	this.line.onMouseDrag = function(event){
 
 		var newYValue = event.point.y;
@@ -696,6 +706,12 @@ function SquarePotential(xAxis,left,right,ceil){
 	this.pathPlotComplex.strokeColor = 'red';
 	this.pathPlotReal.strokeColor = 'green';
 	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal]);
+	this.rightSide.selectable = true;
+	this.rightSide.draggable_ew = true;
+	this.leftSide.selectable = true;
+	this.leftSide.draggable_ew = true;
+	this.ceiling.selectable = true;
+	this.ceiling.draggable_ns = true;
 
 	this.ceiling.onMouseDrag = function(event){
 
@@ -863,6 +879,8 @@ function LastPotential(xAxis,left){
 	this.pathPlotComplex.strokeColor = 'red';
 	this.pathPlotReal.strokeColor = 'green';
 	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal]);
+	this.leftSide.selectable = true;
+	this.leftSide.draggable_ew = true;
 
 	this.leftSide.onMouseDrag = function(event){
 		var newXValue = event.point.x;
@@ -954,6 +972,8 @@ function FirstPotential(xAxis, right){
 	this.pathPlotComplex.strokeColor = 'red';
 	this.pathPlotReal.strokeColor = 'green';
 	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal]);
+	this.rightSide.selectable = true;
+	this.rightSide.draggable_ew = true;
 
 	this.rightSide.onMouseDrag = function(event){
 		var newXValue = event.point.x;
@@ -1014,10 +1034,17 @@ FirstPotential.prototype.constraintX = function(newX){
 
 function onMouseMove(event) {
 	project.activeLayer.selected = false;
+	document.getElementById("canvas").style.cursor = "default";
 	if (event.item) {
-		if (event.item.isChild(project.activeLayer)){
+
+		if (event.item.selectable){
 			event.item.selected = true;
-			//TODO: fix this, it doesn't see the items as being children of the active layer
+		}
+		if (event.item.draggable_ns){
+			document.getElementById("canvas").style.cursor = "ns-resize";
+		}
+		if (event.item.draggable_ew){
+			document.getElementById("canvas").style.cursor = "ew-resize";
 		}
 	}
 }
@@ -1070,7 +1097,11 @@ function BoundStateArrowHead(x,y){ //Create arrowhead pointing right with the ti
 	this.init();
 }
 
+
 regionsSetup.randomSetup();
+
+
 energy.line.bringToFront();
 update();
 updateBoundStates();
+
