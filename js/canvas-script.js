@@ -1,3 +1,5 @@
+
+
 var layout = {
 		pathMainRect: new Path(),  // Outer rectangle
 		// padding inside outer rectangle
@@ -7,7 +9,10 @@ var layout = {
 		maxX: view.viewSize.width - 20,
 		axes: new Group(),
 		xAxisHeight: ( view.viewSize.height - 20) * .7,
-		yScale: 1000, // Overall scale of the wavefunction
+		yScale: 2, // Overall scale of the wavefunction
+		defaultyScale: 2,
+		yScaleProb: 2,
+		defaultyScaleProb: 2,
 		boundStateArrows: [], //Holds the arrows showing which energy the boundstates have
 		layer: new Layer(),
 		createMainRect: function(){ //creates a black rectangle around the canvas
@@ -19,11 +24,14 @@ var layout = {
 			layout.pathMainRect.strokeWidth = 10;	
 			layout.layer.addChild(layout.pathMainRect);
 		},
-		createArrows: function(){ //Creates arrows pointing to the bound state energies
-
+		removeArrows: function(){
 			for (var i= 0; i < layout.boundStateArrows.length; i++){
 				layout.boundStateArrows[i].destroy(); //Remove the old arrows
 			}
+		},
+		createArrows: function(){ //Creates arrows pointing to the bound state energies
+
+			layout.removeArrows();
 			for (var i = 0; i < solver.boundStateEnergies.length; i++){
 				layout.boundStateArrows[i] = new BoundStateArrowHead(layout.minX - 1, layout.xAxisHeight - solver.boundStateEnergies[i]);
 			}
@@ -54,24 +62,25 @@ var layout = {
 			layout.layer.addChild(layout.axes);
 		},
 		resize: function(){
-			
+
 		}
 };
 
 
 var regionsSetup = { // Stores the regions and methods to create preset regions
 		nRegions: 5, // number of regions, first and last always have a potential value of zero
-		defaultLength: 0,
+		defaultnRegions: 5,
+		Length: 0,
 		walls: [], // arrays of walls separating each region in pixels
 		ceilings: [], // height of the potential in pixels
 		regions: [], // holds the region objects
 		boundState: false,
 		maxEnergyHeight: 20, // Max energy in pixel
 		randomSetup: function(){ // setup regions as having a random potential values
-			regionsSetup.defaultLength =  Math.round( (layout.maxX - layout.minX) / regionsSetup.nRegions );
+			regionsSetup.Length =  Math.round( (layout.maxX - layout.minX) / regionsSetup.nRegions );
 
 			for ( var i = 0; i < regionsSetup.nRegions-1; i++){ // there are nRegions - 1 walls, yAxis does not count as a wall
-				regionsSetup.walls[i] = layout.minX + regionsSetup.defaultLength + regionsSetup.defaultLength*i;
+				regionsSetup.walls[i] = layout.minX + regionsSetup.Length + regionsSetup.Length*i;
 			}
 
 			for ( var i = 0; i < regionsSetup.nRegions-2; i++){ // there are nRegions - 2 ceilings, since first and last have zero potential
@@ -94,15 +103,15 @@ var regionsSetup = { // Stores the regions and methods to create preset regions
 			}
 		},
 		circleSetup: function(){ // setups regions as approximating a half circle
-			regionsSetup.defaultLength =  Math.round( (layout.maxX - layout.minX) / regionsSetup.nRegions );
+			regionsSetup.Length =  Math.round( (layout.maxX - layout.minX) / regionsSetup.nRegions );
 			for ( var i = 0; i < regionsSetup.nRegions-1; i++){ // there are nRegions - 1 walls, yAxis does not count as a wall
-				regionsSetup.walls[i] = layout.minX + regionsSetup.defaultLength + regionsSetup.defaultLength*i;
+				regionsSetup.walls[i] = layout.minX + regionsSetup.Length + regionsSetup.Length*i;
 			}
 			var circleRadius =  3*(layout.xAxisHeight - layout.minY)/5;
 			var x = 0;
 			var circleCenterX = layout.minX - (layout.maxX - layout.minX)/2;
 			for ( var i = 0; i < regionsSetup.nRegions-2; i++){ // there are nRegions - 2 ceilings, since first and last have zero potential
-				x = regionsSetup.walls[i] - regionsSetup.defaultLength*.5;
+				x = regionsSetup.walls[i];
 				regionsSetup.ceilings[i] = circleYCoord(x, circleRadius, circleCenterX);
 
 			}
@@ -132,7 +141,12 @@ var regionsSetup = { // Stores the regions and methods to create preset regions
 				}
 
 			};
-		}
+		},
+		destroy: function() {
+			for (var i = 0; i < regionsSetup.nRegions; i++){
+				regionsSetup.regions[i].destroy();
+			}
+		},
 };
 
 var physics = { // holds physically relevant variables and piecewise eigenfunctions
@@ -209,6 +223,8 @@ var solver = {
 
 		boundStateConstraint: math.matrix(),
 		boundStateEnergies: [],
+		boundStateIndex: -1,
+		boundStateAgreement: [],
 		setConstraintVector: function(){ // sets vector b in Ax = b;
 			var vectorSize = 0;
 			solver.constraintVector = [];
@@ -373,16 +389,20 @@ var solver = {
 
 			// Sets the normalized coefficients 
 			var index = 0;
+			var newCoef1 = 0;
+			var newCoef2 = 0;
 			for (var i = 0; i < regionsSetup.nRegions; i++ ){
 				if (regionsSetup.regions[i].basisFunction1){
-					regionsSetup.regions[i].coef1 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(integral));
-					solver.solutionCoefs.set([index],math.divide(solver.solutionCoefs.get([index]), Math.sqrt(integral)));
+					newCoef1 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(integral));
+					regionsSetup.regions[i].coef1 = newCoef1;
+					solver.solutionCoefs.set([index], newCoef1);
 					index += 1;
 
 				}
 				if (regionsSetup.regions[i].basisFunction2){
-					regionsSetup.regions[i].coef2 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(integral));
-					solver.solutionCoefs.set([index],math.divide(solver.solutionCoefs.get([index]), Math.sqrt(integral)));
+					newCoef2 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(integral));
+					regionsSetup.regions[i].coef2 = newCoef2;
+					solver.solutionCoefs.set([index], newCoef2);
 					index += 1;
 				}
 
@@ -409,16 +429,20 @@ var solver = {
 			}
 			// Sets the normalized coefficients 
 			var index = 0;
+			var newCoef1 = 0;
+			var newCoef2 = 0;
 			for (var i = 0; i < regionsSetup.nRegions; i++ ){
 				if (regionsSetup.regions[i].basisFunction1){
-					regionsSetup.regions[i].coef1 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(sum));
-					solver.solutionCoefs.set([index],math.divide(solver.solutionCoefs.get([index]), Math.sqrt(sum)));
+					newCoef1 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(sum));
+					regionsSetup.regions[i].coef1 = newCoef1;
+					solver.solutionCoefs.set([index], newCoef1);
 					index += 1;
 
 				}
 				if (regionsSetup.regions[i].basisFunction2){
-					regionsSetup.regions[i].coef2 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(sum));
-					solver.solutionCoefs.set([index],math.divide(solver.solutionCoefs.get([index]), Math.sqrt(sum)));
+					newCoef2 = math.divide(solver.solutionCoefs.get([index]), Math.sqrt(sum));
+					regionsSetup.regions[i].coef2 = newCoef2;
+					solver.solutionCoefs.set([index], newCoef2);
 					index += 1;
 				}
 
@@ -448,6 +472,11 @@ var solver = {
 
 			}
 		},
+		clearBoundStates: function(){
+			solver.boundStateEnergies = [];
+			solver.boundStateAgreement = [];
+			boundStateIndex = -1;
+		},
 		findBoundStates: function(){
 
 			var Emax = 0;
@@ -460,9 +489,7 @@ var solver = {
 			var dAgreement = 0;
 			var count = 0;
 			var countBoundState = 0;
-			var boundStateAgreement = [];
-			solver.boundStateEnergies = [];
-
+			solver.clearBoundStates();
 
 			while(E > Emin){
 
@@ -470,18 +497,18 @@ var solver = {
 				checkConstraint(E);
 				dAgreement = Math.min(3000,(agreement - dAgreement)/interactivedE);
 
-				if (agreement < 0.01){
+				if (agreement < 0.005){
 					if (countBoundState == 0){
 						solver.boundStateEnergies[0] = E;
-						boundStateAgreement[0] = agreement;
+						solver.boundStateAgreement[0] = agreement;
 						countBoundState += 1;
 					}else {
-						if ((Math.abs(solver.boundStateEnergies[countBoundState- 1] - E) < 0.5) & (agreement < boundStateAgreement[countBoundState-1])){
+						if ((Math.abs(solver.boundStateEnergies[countBoundState- 1] - E) < 2) & (agreement < solver.boundStateAgreement[countBoundState-1])){
 							solver.boundStateEnergies[countBoundState - 1] = E;
-							boundStateAgreement[countBoundState - 1] = agreement;
-						} else if (Math.abs(solver.boundStateEnergies[countBoundState- 1] - E) > 0.5 ){
+							solver.boundStateAgreement[countBoundState - 1] = agreement;
+						} else if (Math.abs(solver.boundStateEnergies[countBoundState- 1] - E) > 2 ){
 							solver.boundStateEnergies[countBoundState] = E;
-							boundStateAgreement[countBoundState] = agreement;
+							solver.boundStateAgreement[countBoundState] = agreement;
 							countBoundState += 1;
 						}
 					}
@@ -509,12 +536,13 @@ var solver = {
 				agreement = 1000*math.abs(math.dot(solver.boundStateConstraint, solver.solutionCoefs)); //scaled up to be a bigger number
 			}
 
-			console.log(count);
+
 		}
 
 };
 var plotter = {
 		layer: new Layer(),
+		text: new PointText(),
 		plot: function(E){
 
 			if (E > 0) { // Plots scattering
@@ -547,48 +575,70 @@ var plotter = {
 			var V = region.potential;
 			var newPComplex = new Point();
 			var newPReal = new Point();
-			var yScale = layout.yScale; //scale everything when plotting
+			var newPProb = new Point();
+
+			var tempF1;
+			var tempF2;
+			var tempF1pF2;
+			var yScale = layout.yScale * (layout.maxY - layout.minY)*(layout.maxX - layout.minX)/500; //scale wavefunction when plotting
+			var yScaleProb = 15* layout.yScaleProb * (layout.maxY - layout.minY)*(layout.maxX - layout.minX)/500; //scale probability when plotting
 			for (var x = region.left; x < region.right; x = x + 5) {
 
 				newPComplex.x = x;
 				newPReal.x = x;
+				newPProb.x = x;
 				if (region.basisFunction2){
 
-					newPReal.y = layout.xAxisHeight - yScale*(math.add(math.multiply(region.coef1,region.basisFunction1(x,E,V)) , math.multiply(region.coef2,region.basisFunction2(x,E,V)))).re;
-					newPComplex.y = layout.xAxisHeight - yScale*(math.add(math.multiply(region.coef1,region.basisFunction1(x,E,V)) , math.multiply(region.coef2,region.basisFunction2(x,E,V)))).im;
+					tempF1 = math.multiply(region.coef1,region.basisFunction1(x,E,V));
+					tempF2 = math.multiply(region.coef2,region.basisFunction2(x,E,V));
+					tempF1pF2 = math.add(tempF1, tempF2);
+					newPReal.y = layout.xAxisHeight - yScale*tempF1pF2.re;
+					newPComplex.y = layout.xAxisHeight - yScale*tempF1pF2.im;
+					newPProb.y = layout.xAxisHeight - yScaleProb*math.pow(math.abs(tempF1pF2), 2);
 
 				} else {
+					tempF1 = math.multiply(region.coef1,region.basisFunction1(x,E,V));
+					newPReal.y = layout.xAxisHeight - yScale*tempF1.re;
+					newPComplex.y = layout.xAxisHeight - yScale*tempF1.im;
+					newPProb.y = layout.xAxisHeight - yScaleProb*math.pow(math.abs(tempF1), 2);
 
-					newPReal.y = layout.xAxisHeight - yScale*(math.multiply(region.coef1,region.basisFunction1(x,E,V))).re;
-					newPComplex.y = layout.xAxisHeight - yScale*(math.multiply(region.coef1,region.basisFunction1(x,E,V))).im;
 				}
 
 				region.pathPlotReal.add(newPReal);
 				region.pathPlotComplex.add(newPComplex);
+				region.pathPlotProb.add(newPProb);
 			}
 
 			// Add a point at the right endpoint too
 			x = region.right;
 			newPComplex.x = x;
 			newPReal.x = x;
+			newPProb.x = x;
 			if (region.basisFunction2){
 
-				newPReal.y = layout.xAxisHeight - yScale*(math.add(math.multiply(region.coef1,region.basisFunction1(x,E,V)) , math.multiply(region.coef2,region.basisFunction2(x,E,V)))).re;
-				newPComplex.y = layout.xAxisHeight - yScale*(math.add(math.multiply(region.coef1,region.basisFunction1(x,E,V)) , math.multiply(region.coef2,region.basisFunction2(x,E,V)))).im;
+				tempF1 = math.multiply(region.coef1,region.basisFunction1(x,E,V));
+				tempF2 = math.multiply(region.coef2,region.basisFunction2(x,E,V));
+				tempF1pF2 = math.add(tempF1, tempF2);
+				newPReal.y = layout.xAxisHeight - yScale*tempF1pF2.re;
+				newPComplex.y = layout.xAxisHeight - yScale*tempF1pF2.im;
+				newPProb.y = layout.xAxisHeight - yScaleProb*math.pow(math.abs(tempF1pF2), 2);
 
 			} else {
-
-				newPReal.y = layout.xAxisHeight - yScale*(math.multiply(region.coef1,region.basisFunction1(x,E,V))).re;
-				newPComplex.y = layout.xAxisHeight - yScale*(math.multiply(region.coef1,region.basisFunction1(x,E,V))).im;
+				tempF1 = math.multiply(region.coef1,region.basisFunction1(x,E,V))
+				newPReal.y = layout.xAxisHeight - yScale*tempF1.re;
+				newPComplex.y = layout.xAxisHeight - yScale*tempF1.im;
+				newPProb.y = layout.xAxisHeight - yScaleProb*math.pow(math.abs(tempF1), 2);
 			}
 
 			region.pathPlotReal.add(newPReal);
 			region.pathPlotComplex.add(newPComplex);
+			region.pathPlotProb.add(newPProb);
 
 		},
 		clearRegion: function(region){
 			region.pathPlotComplex.removeSegments();
 			region.pathPlotReal.removeSegments();
+			region.pathPlotProb.removeSegments();
 
 		},
 		clearGraph: function(){
@@ -598,6 +648,41 @@ var plotter = {
 		},
 		resize: function(){
 
+		},
+		displayText: function(text){
+			plotter.text.point = {x: (layout.maxX - layout.minX)/3 , y: (layout.maxY - layout.minY)/2 };
+			plotter.text.content = text;
+			plotter.text.fillColor = 'black';
+			plotter.text.fontSize = 25;
+			plotter.text.visible = true;
+			plotter.text.bringToFront();
+		},
+		clearText: function(){
+			plotter.text.visible = false;
+		},
+		setVisible: function(visible, pathName){
+			if (visible){
+				try {
+					for (var i = 0; i < regionsSetup.nRegions; i++){
+						regionsSetup.regions[i][pathName].visible = true;
+					}
+				}
+				catch(err) {
+					console.log(err);
+				}
+
+			} else {
+
+				try {
+					for (var i = 0; i < regionsSetup.nRegions; i++){
+
+						regionsSetup.regions[i][pathName].visible = false;
+					}
+				}
+				catch(err) {
+					console.log(err);
+				}
+			}
 		}
 };
 
@@ -622,16 +707,47 @@ function Energy(E ){
 	this.constraintE = function(newY){
 		var answer;
 		var topConstraint = regionsSetup.maxEnergyHeight; // bigger is lower, 0 is top
-		var bottomConstraint = layout.maxY; // bigger is lower, 0 is top
+
+		if (regionsSetup.boundState == true){
+			var bottomConstraint = layout.maxY; // bigger is lower, 0 is top
+		} else { // don't allow negative or very small energy, E > 1
+			var bottomConstraint = layout.xAxisHeight - 1;
+		}
 		answer = Math.max( newY, topConstraint );
 		answer = Math.min( answer, bottomConstraint );
 		return answer;
+	};
+	this.updateEnergy = function(E){
+
+		var newE = E ;
+		
+		if (newE < 0){
+
+			updateBoundStateIndex(E);
+			updateBoundStateBtns();
+
+
+			if (solver.boundStateIndex == -1){
+				parent.moveLine(layout.xAxisHeight - 10);
+				solve();
+				plot();
+			} else{
+				parent.moveLine(layout.xAxisHeight - solver.boundStateEnergies[solver.boundStateIndex] );
+				solve();
+				plot();
+			}
+		} else{
+
+			solve();
+			plot();
+
+		}
 	};
 
 	var parent = this;
 	this.energyY = this.constraintE(E); 
 	this.energy = layout.xAxisHeight - this.energyY;
-	this.line = new Path([ new Point(layout.minX, this.energyY ), new Point(layout.maxX, this.energyY)]);
+	this.line = new Path([ new Point(5, this.energyY ), new Point(view.viewSize.width - 5, this.energyY)]);
 
 	this.line.strokeWidth = 5;
 	this.line.strokeColor = 'red';
@@ -645,33 +761,18 @@ function Energy(E ){
 		var newE = layout.xAxisHeight - newYValue;
 		if (newE > 0){
 			parent.moveLine(newYValue);
-			update();
+			solve();
+			plot();
 		}else{
 			parent.moveLine(newYValue);
-			update();
+			solve();
+			plot();
 		}
 	};
 	this.line.onMouseUp = function(event){
 		var newYValue = event.point.y;
 		var newE = layout.xAxisHeight - newYValue;
-		var index = -1;
-		if (newE < 0){
-
-
-			for (var i = 0; i < solver.boundStateEnergies.length ; i++){
-				if (newE < solver.boundStateEnergies[i]){
-					index += 1;
-				}
-			}
-
-			if (index == -1){
-				parent.moveLine(layout.xAxisHeight - 0.1);
-				update();
-			} else{
-				parent.moveLine(layout.xAxisHeight - solver.boundStateEnergies[index] );
-				update();
-			}
-		}
+		parent.updateEnergy(newE);
 	};
 };
 
@@ -692,6 +793,7 @@ function SquarePotential(xAxis,left,right,ceil){
 	this.coef2 = math.complex();
 	this.pathPlotComplex = new Path();
 	this.pathPlotReal = new Path();
+	this.pathPlotProb = new Path();
 	this.leftSide = new Path([ new Point(this.left, xAxis ), new Point(this.left, this.top)]);
 	this.rightSide = new Path([ new Point(this.right, xAxis ), new Point(this.right, this.top)]);
 	this.ceiling = new Path([ new Point(this.left, this.top ), new Point(this.right, this.top)]);
@@ -704,8 +806,13 @@ function SquarePotential(xAxis,left,right,ceil){
 	this.ceiling.strokeWidth = 5;
 	this.ceiling.strokeColor = 'blue';
 	this.pathPlotComplex.strokeColor = 'red';
+	this.pathPlotComplex.strokeWidth = 3;
 	this.pathPlotReal.strokeColor = 'green';
-	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal]);
+	this.pathPlotReal.strokeWidth = 3;
+	this.pathPlotProb.strokeColor = 'grey';
+	this.pathPlotProb.strokeWidth = 3;
+
+	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal,this.pathPlotProb]);
 	this.rightSide.selectable = true;
 	this.rightSide.draggable_ew = true;
 	this.leftSide.selectable = true;
@@ -719,7 +826,8 @@ function SquarePotential(xAxis,left,right,ceil){
 		parent.moveCeiling(newYValue);
 
 		if (energy.energy > 0){
-			update();
+			solve();
+			plot();
 		}
 	};
 	this.leftSide.onMouseDrag = function(event){
@@ -730,7 +838,8 @@ function SquarePotential(xAxis,left,right,ceil){
 		}
 
 		if (energy.energy > 0){
-			update();
+			solve();
+			plot();
 		}
 	};
 	this.rightSide.onMouseDrag = function(event){
@@ -741,26 +850,31 @@ function SquarePotential(xAxis,left,right,ceil){
 		}
 
 		if (energy.energy > 0){
-			update();
+			solve();
+			plot();
 		}
 	};
 
 	this.rightSide.onMouseUp = function(event){
-		updateBoundStates();
-		update();
 
+		update();
+		updateBoundStateBtns();
+		energy.updateEnergy(energy.energy);
 	};
 
 
 	this.leftSide.onMouseUp = function(event){
-		updateBoundStates();
-		update();
 
-	};
+
+		update();
+		updateBoundStateBtns();
+		energy.updateEnergy(energy.energy);
+		};
 
 	this.ceiling.onMouseUp = function(event){
-		updateBoundStates();
 		update();
+		updateBoundStateBtns();
+		energy.updateEnergy(energy.energy);
 
 	};
 
@@ -845,6 +959,16 @@ SquarePotential.prototype.constraintY = function(newY){
 	answer = Math.min( answer, bottomConstraint );
 	return answer;
 };
+SquarePotential.prototype.destroy = function(){
+
+	this.pathPlotComplex.remove();
+	this.pathPlotReal.remove();
+	this.pathPlotProb.remove();
+	this.leftSide.remove();
+	this.rightSide.remove();
+	this.ceiling.remove();
+
+};
 
 
 LastPotential.prototype = new SquarePotential();
@@ -865,6 +989,7 @@ function LastPotential(xAxis,left){
 	this.coef2 = math.complex();
 	this.pathPlotComplex = new Path();
 	this.pathPlotReal = new Path();
+	this.pathPlotProb = new Path();
 	this.leftSide = new Path([ new Point(this.left, xAxis ), new Point(this.left, this.top)]);
 	this.rightSide = new Path([ new Point(this.right, xAxis ), new Point(this.right, this.top)]);
 	this.ceiling = new Path([ new Point(this.left, this.top ), new Point(this.right, this.top)]);
@@ -877,10 +1002,16 @@ function LastPotential(xAxis,left){
 	this.ceiling.strokeWidth = 5;
 	this.ceiling.strokeColor = 'blue';
 	this.pathPlotComplex.strokeColor = 'red';
+	this.pathPlotComplex.strokeWidth = 3;
 	this.pathPlotReal.strokeColor = 'green';
-	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal]);
+	this.pathPlotReal.strokeWidth = 3;
+	this.pathPlotProb.strokeColor = 'grey';
+	this.pathPlotProb.strokeWidth = 3;
+
+	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal, this.pathPlotProb]);
 	this.leftSide.selectable = true;
 	this.leftSide.draggable_ew = true;
+
 
 	this.leftSide.onMouseDrag = function(event){
 		var newXValue = event.point.x;
@@ -889,14 +1020,15 @@ function LastPotential(xAxis,left){
 			parent.leftNeighbor.moveRightSide(newXValue);
 		}
 		if (energy.energy > 0){
-			update();
+			solve();
+			plot();
 		}
 	};
 	this.leftSide.onMouseUp = function(event){
-		updateBoundStates();
 		update();
-
-	};
+		updateBoundStateBtns();
+		energy.updateEnergy(energy.energy);
+		};
 
 	this.setHandles(energy.energy);
 
@@ -958,6 +1090,7 @@ function FirstPotential(xAxis, right){
 	this.coef2 = math.complex();
 	this.pathPlotComplex = new Path();
 	this.pathPlotReal = new Path();
+	this.pathPlotProb = new Path();
 	this.leftSide = new Path([ new Point(this.left, xAxis ), new Point(this.left, this.top)]);
 	this.rightSide = new Path([ new Point(this.right, xAxis ), new Point(this.right, this.top)]);
 	this.ceiling = new Path([ new Point(this.left, this.top ), new Point(this.right, this.top)]);
@@ -970,8 +1103,13 @@ function FirstPotential(xAxis, right){
 	this.ceiling.strokeWidth = 5;
 	this.ceiling.strokeColor = 'blue';
 	this.pathPlotComplex.strokeColor = 'red';
+	this.pathPlotComplex.strokeWidth = 3;
 	this.pathPlotReal.strokeColor = 'green';
-	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal]);
+	this.pathPlotReal.strokeWidth = 3;
+	this.pathPlotProb.strokeColor = 'grey';
+	this.pathPlotProb.strokeWidth = 3;
+
+	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal, this.pathPlotProb]);
 	this.rightSide.selectable = true;
 	this.rightSide.draggable_ew = true;
 
@@ -982,15 +1120,16 @@ function FirstPotential(xAxis, right){
 			parent.rightNeighbor.moveLeftSide(newXValue);
 		}
 		if (energy.energy > 0){
-			update();
+			solve();
+			plot();
 		}
 	};
 
 	this.rightSide.onMouseUp = function(event){
-		updateBoundStates();
 		update();
-
-	};
+		updateBoundStateBtns();
+		energy.updateEnergy(energy.energy);
+		};
 
 	this.setHandles(energy.energy);
 
@@ -1052,21 +1191,54 @@ function onMouseMove(event) {
 
 function update(){
 	var E = energy.energy;
-
+	resetBoundStates();
+	updateBoundStates();
 	solver.setHandles( E);
 	solver.setConstraintVector();
 	solver.setMatrix(E);
 	solver.solveCoefs(E);
 	solver.normalize(E);
 	plotter.plot(E);
+}
 
+function solve(){
+	var E = energy.energy;
+
+	solver.setHandles( E);
+	solver.setConstraintVector();
+	solver.setMatrix(E);
+	solver.solveCoefs(E);
+	solver.normalize(E);
+}
+
+function plot(){
+	var E = energy.energy;
+	plotter.plot(E);
 }
 
 function updateBoundStates(){
 	if (regionsSetup.boundState){
+		plotter.displayText('Searching for boundstates');
 		solver.findBoundStates();
 		layout.createArrows();
+		plotter.clearText();
 	}
+}
+
+function resetBoundStates(){
+	solver.clearBoundStates();
+	layout.removeArrows();
+
+}
+
+function updateBoundStateIndex(E){
+var index = -1;
+for (var i = 0; i < solver.boundStateEnergies.length ; i++){
+	if (E < solver.boundStateEnergies[i]){
+		index += 1;
+	}
+}
+solver.boundStateIndex = index;
 }
 
 function BoundStateArrowHead(x,y){ //Create arrowhead pointing right with the tip at (x,y)
@@ -1082,6 +1254,9 @@ function BoundStateArrowHead(x,y){ //Create arrowhead pointing right with the ti
 
 		this.arrow.strokeWidth = 4;
 		this.arrow.strokeColor = 'red';
+		this.arrow.closed = true;
+		this.arrow.fillColor = 'red';
+		this.arrow.strokeJoin = 'round';
 	};
 	this.destroy = function(){
 		this.arrow.remove();
@@ -1100,8 +1275,178 @@ function BoundStateArrowHead(x,y){ //Create arrowhead pointing right with the ti
 
 regionsSetup.randomSetup();
 
-
 energy.line.bringToFront();
 update();
 updateBoundStates();
 
+
+
+function updateBoundStateBtns(){
+	if ( (solver.boundStateEnergies.length)&&( solver.boundStateIndex < (solver.boundStateEnergies.length - 1) ) ){
+		$("#prevBoundStateBtn")[0].disabled = false;	
+	}else {
+		$("#prevBoundStateBtn")[0].disabled = true;
+	}
+
+	if ( (solver.boundStateEnergies.length)&&( solver.boundStateIndex > 0 )){
+		$("#nextBoundStateBtn")[0].disabled = false;
+	}else {
+		$("#nextBoundStateBtn")[0].disabled = true;
+	}
+
+}
+
+function launchPreset(presetName){
+	switch(presetName) {
+	case "Random Potential":
+	{regionsSetup.randomSetup();}
+	break;
+	case "Half Circle":
+	{regionsSetup.circleSetup();}
+	break;
+	default:
+	{regionsSetup.randomSetup();}
+	}
+
+	resetBoundStates();
+	updateBoundStates();
+	updateBoundStateIndex(energy.energy);
+	updateBoundStateBtns();
+	update();
+}
+
+$(function(){
+	if ( $("#boundStateBtn")[0].innerHTML == "Enable Boundstates" ){
+		$("#prevBoundStateBtn")[0].disabled = true;
+		$("#nextBoundStateBtn")[0].disabled = true;
+		resetBoundStates();
+	}else {
+		updateBoundStateBtns();
+
+	}
+});
+
+$(function(){
+	$("#boundStateBtn").click( function(){
+
+		if (this.innerHTML == "Enable Boundstates"){
+			$("#boundStateBtn").html("Disable Boundstates");
+			regionsSetup.boundState = true;
+			resetBoundStates();
+			updateBoundStates();
+			updateBoundStateIndex(energy.energy);
+			updateBoundStateBtns();
+			
+
+		} else {
+			$("#boundStateBtn").html("Enable Boundstates");
+			regionsSetup.boundState = false;
+			$("#prevBoundStateBtn")[0].disabled = true;
+			$("#nextBoundStateBtn")[0].disabled = true;
+			resetBoundStates();
+			if (energy.energy < 10){
+				energy.moveLine(layout.xAxisHeight - 10 );
+			}
+			update();
+		}
+		
+	});
+});
+
+$(function(){
+	$("#prevBoundStateBtn").click( function(){
+		solver.boundStateIndex += 1;
+		updateBoundStateBtns();
+		energy.moveLine(layout.xAxisHeight - solver.boundStateEnergies[solver.boundStateIndex] );
+		
+		
+		solve();
+		plot();
+		
+	});
+
+	$("#nextBoundStateBtn").click( function(){
+		solver.boundStateIndex -= 1;
+		updateBoundStateBtns();
+		energy.moveLine(layout.xAxisHeight - solver.boundStateEnergies[solver.boundStateIndex] );
+		updateBoundStateBtns();
+		
+		solve();
+		plot();
+	});
+});
+
+$(function(){
+
+	$("#nRegions").attr('value', regionsSetup.nRegions);
+	$("#nRegions").change( function(){
+		regionsSetup.destroy();
+		var newValue = jQuery.isNumeric(this.value)? Math.round(this.value) : regionsSetup.defaultnRegions;
+		newValue = Math.max(Math.min(newValue, 50), 3);
+		regionsSetup.nRegions = newValue;
+		this.value = regionsSetup.nRegions;
+
+		launchPreset($("#presetPotential").val());
+
+	});
+});
+
+$(function(){
+
+	$("#yScale").attr('value', layout.yScale);
+	$("#yScale").change( function(){
+		var newValue = jQuery.isNumeric(this.value)? this.value : layout.defaultyScale;
+		newValue = Math.max(Math.min(newValue, 5), .5);
+		layout.yScale = newValue;
+		this.value = layout.yScale;
+		plotter.plot(energy.energy);
+	});
+});
+
+$(function(){
+
+	$("#yScaleProb").attr('value', layout.yScaleProb);
+	$("#yScaleProb").change( function(){
+		var newValue = jQuery.isNumeric(this.value)? this.value : layout.defaultyScaleProb;
+		newValue = Math.max(Math.min(newValue, 5), .5);
+		layout.yScaleProb = newValue;
+		this.value = newValue;
+		plotter.plot(energy.energy);
+	});
+});
+
+$(function(){
+
+
+	$("#presetPotential").change( function(){
+		var newValue = this.value;
+		regionsSetup.destroy();
+		launchPreset(newValue);
+
+
+	});
+});
+
+
+$(function(){
+
+
+	plotter.setVisible($("#realCheckbox").attr('checked'), 'pathPlotReal');
+	plotter.setVisible($("#complexCheckbox").attr('checked'), 'pathPlotComplex');
+	plotter.setVisible($("#probCheckbox").attr('checked'), 'pathPlotProb');
+
+	$("#realCheckbox").change( function(){
+		plotter.setVisible(this.checked, 'pathPlotReal');
+
+	});
+
+	$("#complexCheckbox").change( function(){
+		plotter.setVisible(this.checked, 'pathPlotComplex');
+
+	});
+
+	$("#probCheckbox").change( function(){
+		plotter.setVisible(this.checked, 'pathPlotProb');
+
+	});
+});
