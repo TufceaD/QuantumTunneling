@@ -102,7 +102,7 @@ var regionsSetup = { // Stores the regions and methods to create preset regions
 				regionsSetup.regions[i].setLeftNeighbor(regionsSetup.regions[i-1]);
 			}
 		},
-		circleSetup: function(){ // setups regions as approximating a half circle
+		circleUpSetup: function(){ // setups regions as approximating a half circle
 			regionsSetup.Length =  Math.round( (layout.maxX - layout.minX) / regionsSetup.nRegions );
 			for ( var i = 0; i < regionsSetup.nRegions-1; i++){ // there are nRegions - 1 walls, yAxis does not count as a wall
 				regionsSetup.walls[i] = layout.minX + regionsSetup.Length + regionsSetup.Length*i;
@@ -138,6 +138,45 @@ var regionsSetup = { // Stores the regions and methods to create preset regions
 					return layout.xAxisHeight;
 				} else {
 					return layout.xAxisHeight - yCoord;
+				}
+
+			};
+		},circleDownSetup: function(){ // setups regions as approximating a half circle
+			regionsSetup.Length =  Math.round( (layout.maxX - layout.minX) / regionsSetup.nRegions );
+			for ( var i = 0; i < regionsSetup.nRegions-1; i++){ // there are nRegions - 1 walls, yAxis does not count as a wall
+				regionsSetup.walls[i] = layout.minX + regionsSetup.Length + regionsSetup.Length*i;
+			}
+			var circleRadius =  (layout.maxY - layout.xAxisHeight );
+			var x = 0;
+			var circleCenterX = layout.minX - (layout.maxX - layout.minX)/2;
+			for ( var i = 0; i < regionsSetup.nRegions-2; i++){ // there are nRegions - 2 ceilings, since first and last have zero potential
+				x = regionsSetup.walls[i];
+				regionsSetup.ceilings[i] = negCircleYCoord(x, circleRadius, circleCenterX);
+
+			}
+
+			// First region has zero potential 
+			regionsSetup.regions[0] = new FirstPotential(layout.xAxisHeight, regionsSetup.walls[0]);
+			// Setup the regions in the middle
+			for (var i = 1; i < regionsSetup.nRegions - 1 ; i++){
+				regionsSetup.regions[i] = new SquarePotential(layout.xAxisHeight, regionsSetup.walls[i-1], regionsSetup.walls[i], regionsSetup.ceilings[i-1]);
+			}
+			// Last region has zero potential
+			regionsSetup.regions[regionsSetup.nRegions - 1] = new LastPotential(layout.xAxisHeight, regionsSetup.walls[regionsSetup.nRegions - 2]);
+
+			for (var i = 0; i < regionsSetup.nRegions - 1; i++){
+				regionsSetup.regions[i].setRightNeighbor(regionsSetup.regions[i+1]);
+			}
+			for (var i = 1; i < regionsSetup.nRegions ; i++){
+				regionsSetup.regions[i].setLeftNeighbor(regionsSetup.regions[i-1]);
+			}
+
+			function negCircleYCoord(x, circleRadius, circleCenterX){ //returns the -Y coordinate of the circle
+				var yCoord = math.sqrt( math.pow(circleRadius,2) - math.pow(x + circleCenterX,2)/4 );
+				if (math.im(yCoord)){
+					return layout.xAxisHeight;
+				} else {
+					return layout.xAxisHeight + yCoord;
 				}
 
 			};
@@ -661,7 +700,8 @@ var plotter = {
 			plotter.text.visible = false;
 		},
 		setVisible: function(visible, pathName){
-			if (visible){
+			
+			if (visible == true){
 				try {
 					for (var i = 0; i < regionsSetup.nRegions; i++){
 						regionsSetup.regions[i][pathName].visible = true;
@@ -1301,8 +1341,11 @@ function launchPreset(presetName){
 	case "Random Potential":
 	{regionsSetup.randomSetup();}
 	break;
-	case "Half Circle":
-	{regionsSetup.circleSetup();}
+	case "Half-circle dome":
+	{regionsSetup.circleUpSetup();}
+	break;
+	case "Half-circle well":
+	{regionsSetup.circleDownSetup();}
 	break;
 	default:
 	{regionsSetup.randomSetup();}
@@ -1313,6 +1356,14 @@ function launchPreset(presetName){
 	updateBoundStateIndex(energy.energy);
 	updateBoundStateBtns();
 	update();
+	energy.line.bringToFront();
+}
+
+function setVisibility(){
+	plotter.setVisible($("#realCheckbox").prop('checked'), 'pathPlotReal');
+	plotter.setVisible($("#complexCheckbox").prop('checked'), 'pathPlotComplex');
+	plotter.setVisible($("#probCheckbox").prop('checked'), 'pathPlotProb');
+	
 }
 
 $(function(){
@@ -1385,9 +1436,8 @@ $(function(){
 		newValue = Math.max(Math.min(newValue, 50), 3);
 		regionsSetup.nRegions = newValue;
 		this.value = regionsSetup.nRegions;
-
 		launchPreset($("#presetPotential").val());
-
+		setVisibility();
 	});
 });
 
@@ -1422,6 +1472,7 @@ $(function(){
 		var newValue = this.value;
 		regionsSetup.destroy();
 		launchPreset(newValue);
+		setVisibility();
 
 
 	});
@@ -1431,9 +1482,7 @@ $(function(){
 $(function(){
 
 
-	plotter.setVisible($("#realCheckbox").attr('checked'), 'pathPlotReal');
-	plotter.setVisible($("#complexCheckbox").attr('checked'), 'pathPlotComplex');
-	plotter.setVisible($("#probCheckbox").attr('checked'), 'pathPlotProb');
+	setVisibility();
 
 	$("#realCheckbox").change( function(){
 		plotter.setVisible(this.checked, 'pathPlotReal');
