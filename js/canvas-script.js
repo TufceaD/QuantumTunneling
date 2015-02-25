@@ -1,6 +1,6 @@
 var layout = {
 		layer: new Layer(),
-		pathMainRect: new Path(),  // Outer rectangle
+		pathMainRect: new Path.Rectangle(),  // Outer rectangle
 		// padding inside outer rectangle
 		minY: 40,
 		maxY: view.viewSize.height - 40,
@@ -158,6 +158,16 @@ var legend = {
 				path.strokeWidth = 3;
 				legend.layer.addChild(path);
 			}	
+			legend.layer.on('mousedrag', function(event){
+				
+				legend.layer.translate(event.delta);
+				if (layout.pathMainRect.bounds.contains(legend.layer.bounds) == false){
+					legend.layer.translate(-event.delta);
+				}
+			});
+		},
+		setVisible: function(visible){
+			legend.layer.visible = visible;
 		}
 };
 
@@ -1371,6 +1381,7 @@ function setVisibility(){
 	plotter.setVisible($("#complexCheckbox").prop('checked'), 'pathPlotComplex');
 	plotter.setVisible($("#probCheckbox").prop('checked'), 'pathPlotProb');
 	grid.setVisible($("#gridCheckbox").prop('checked'));
+	legend.setVisible($("#legendCheckbox").prop('checked'));
 }
 
 function boundStateMsg(){
@@ -1558,6 +1569,12 @@ $(function(){
 		grid.setVisible(this.checked);
 
 	});
+	
+	$("#legendCheckbox").change( function(){
+		legend.setVisible(this.checked);
+
+	});
+	
 	
 });
 
