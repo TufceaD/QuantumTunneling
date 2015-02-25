@@ -1420,7 +1420,7 @@ function updateRegion(){
 function onFrame(event){
 	// Plot the wavefunction up to 60/3 = 20 frames per second.
 	if ($("#timeCheckbox").prop("checked")){
-	solver.time = event.time; //Update time
+	solver.time += event.delta; //Update time
 	}
 	if (event.count % 3){
 		plot();
