@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-
+ <meta charset="utf-8">
 <!-- Bootstrap -->
 
 <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
@@ -27,7 +27,8 @@
 <script
 	src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
 
-
+<!-- Own css stylesheet -->
+<link rel="stylesheet" type="text/css" href="style.css">
 
 <!-- Load the Paper.js library -->
 <script type="text/javascript" src="js/paper-full.min.js"></script>
@@ -48,87 +49,106 @@
 <body>
 
 
-	<div class="jumbotron" style="width: 940px;">
-
-		<canvas id="canvas" width="900" height="400"
-			data-paper-keepalive="true"
-			style="left-margin: auto; right-margin: auto;"> Your browser does not support HTML5 Canvas, please update to a more modern browser.</canvas>
+	<div class="container" id="canvasContainer">
+		<canvas id="canvas" width="980" height="550"> Your browser does not support HTML5 Canvas, please update to a more modern browser.</canvas>
 
 
-		<div class=" btn-group btn-justified" style="width: 920px">
-
-
-			<button class="btn btn-default" id="boundStateBtn">Enable Boundstates</button>
-
-			<button class="btn btn-default" id="prevBoundStateBtn">Previous
-				Boundstates</button>
-
-			<button class="btn btn-default" id="nextBoundStateBtn">Next Boundstates</button>
-
-			<div class="input-group">
-				<span class="input-group-addon "> Preset Potentials</span> <select
-					class="form-control" id="presetPotential">
-					<option>Random</option>
-					<option>Half-circle dome</option>
-					<option>Half-circle well</option>
-				</select>
+		<div class="modal fade" id="basicModal" tabindex="-1" role="dialog"
+			aria-labelledby="basicModal" aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal"
+							aria-hidden="true">Close</button>
+						<h4 class="modal-title" id="myModalLabel">The search for
+							boundstates has ended!</h4>
+					</div>
+					<div class="modal-body">
+						<div id="boundStatesFound">Oops! There doesn't seem to be
+							any allowed boundstates.</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
+					</div>
+				</div>
 			</div>
 		</div>
-		<div class=" btn-group" style="width: 920px">
+		<div class="container">
+			<div class=" btn-group btn-justified" style="width: 920px">
 
-			<div class="row">
+				<button class="btn btn-default" id="boundStateBtn">Find
+					Boundstates</button>
 
-				<div class="col-xs-4"></div>
-				
-				<div class="col-xs-4">
-					<div class="checkbox">
-						<label> <input type="checkbox" id="realCheckbox" checked>
-							Plot Real Part
-						</label>
-					</div>
+				<button class="btn btn-default" id="prevBoundStateBtn">Previous
+					Boundstates</button>
 
-					<div class="checkbox">
-						<label> <input type="checkbox" id="complexCheckbox"
-							checked> Plot Imaginary Part
-						</label>
-					</div>
+				<button class="btn btn-default" id="nextBoundStateBtn">Next
+					Boundstates</button>
 
-
-					<div class="checkbox">
-						<label> <input type="checkbox" id="probCheckbox" checked>
-							Plot Probability
-						</label>
-					</div>
-				</div>
-				
-				<div class="col-xs-4"></div>
-				
-				<div class="col-xs-4">
-					<div class='btn-group'>
-						<div class="input-group">
-							<span class="input-group-addon text-center"> Number of
-								regions</span><input type="number" min="3" max="50"
-								class="form-control" value=5 id="nRegions">
-						</div>
-
-						<div class="input-group">
-							<span class="input-group-addon text-center"> Wavefunction
-								Scaling</span><input type="number" min="0.5" max="5" step="0.5"
-								class="form-control" value=2 id="yScale">
-						</div>
-
-						<div class="input-group">
-							<span class="input-group-addon text-center"> Probability
-								Scaling</span><input type="number" min="0.5" max="5" step="0.5"
-								class="form-control" value=2 id="yScaleProb">
-						</div>
-					</div>
+				<div class="input-group">
+					<span class="input-group-addon "> Preset Potentials</span> <select
+						class="form-control" id="presetPotential">
+						<option>Random</option>
+						<option>Half-circle dome</option>
+						<option>Half-circle well</option>
+					</select>
 				</div>
 			</div>
+			<div class=" btn-group" style="width: 920px">
 
+				<div class="row">
+
+					<div class="col-xs-4"></div>
+
+					<div class="col-xs-4">
+						<div class="checkbox">
+							<label> <input type="checkbox" id="realCheckbox" checked>
+								Plot Real Part
+							</label>
+						</div>
+
+						<div class="checkbox">
+							<label> <input type="checkbox" id="complexCheckbox"
+								checked> Plot Imaginary Part
+							</label>
+						</div>
+
+
+						<div class="checkbox">
+							<label> <input type="checkbox" id="probCheckbox" checked>
+								Plot Probability
+							</label>
+						</div>
+					</div>
+
+					<div class="col-xs-4"></div>
+
+					<div class="col-xs-4">
+						<div class='btn-group'>
+							<div class="input-group">
+								<span class="input-group-addon text-center"> Number of
+									regions</span><input type="number" min="3" max="10"
+									class="form-control" value=5 id="nRegions">
+							</div>
+
+							<div class="input-group">
+								<span class="input-group-addon text-center"> Wavefunction
+									Scaling</span><input type="number" min="0.5" max="5" step="0.5"
+									class="form-control" value=2 id="yScale">
+							</div>
+
+							<div class="input-group">
+								<span class="input-group-addon text-center"> Probability
+									Scaling</span><input type="number" min="0.5" max="5" step="0.5"
+									class="form-control" value=2 id="yScaleProb">
+							</div>
+						</div>
+					</div>
+				</div>
+
+			</div>
 		</div>
 	</div>
-
 
 	<div class="jumbotron">Explanations</div>
 </body>

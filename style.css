@@ -1,0 +1,20 @@
+@CHARSET "ISO-8859-1";
+
+#canvasContainer {
+	padding: 5px;
+	margin-top: 20px;
+	width: 100%;
+	text-align: center;
+	min-width: 1024px;
+}
+
+canvas {
+   display: inline;
+
+}
+
+.jumbotron {
+	width: 100%;
+	text-alignL center;
+	min-width: 1024px;
+}
