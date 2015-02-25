@@ -8,8 +8,8 @@ var layout = {
 		maxX: view.viewSize.width - 40,
 		//axes and scales
 		axes: new Group(),
-		xAxisHeight: ( view.viewSize.height - 20) * .7,
-		maxEnergyHeight: 20, // Max energy in pixel
+		xAxisHeight: ( view.viewSize.height - 80) * .75,
+		maxEnergyHeight: 45, // Max energy in pixel
 		yScale: 2, // Overall scale of the wavefunction
 		defaultyScale: 2,
 		yScaleProb: 2,
@@ -46,7 +46,7 @@ var layout = {
 			var pYArrowTop = pTop + { x: 0, y: 0 };
 			var yAxisArrow = new Path(pYArrowLeft, pYArrowTop, pYArrowRight);
 			// yLabel
-			var yLabel = new PointText(pTop + {x: -15, y: -10});
+			var yLabel = new PointText(pTop + {x: -20, y: -10});
 			yLabel.content = "E, φ";
 			yLabel.fontSize = 20;
 			yLabel.visible = true;
@@ -65,7 +65,7 @@ var layout = {
 			xLabel.fontSize = 20;
 			xLabel.visible = true;
 			
-			console.log(xLabel)
+			
 			//Axes group
 			layout.axes = new Group(yAxis, yAxisArrow, yLabel, xAxis, xAxisArrow, xLabel);
 			layout.axes.strokeWidth = 2.5;
@@ -76,6 +76,36 @@ var layout = {
 		},
 };
 
+var grid = {
+		layer: new Layer(),
+		createGrid: function() {
+			var xStep = (layout.maxX - layout.minX)/21;
+			var yStep = (layout.maxY - layout.minY)/21;
+			var xVals = [];
+			var yVals = [];
+			var xPaths = [];
+			var yPaths = [];
+			for (var i = 0; i < 22; i++){
+				xVals[i] = 40 + i*xStep;
+				yVals[i] = 40 + i*yStep;
+			}
+			for (var i = 0; i < 22; i++){
+				xPaths[i] = new Path();
+				yPaths[i] = new Path();
+				for (var j = 0; j < 22; j++){
+					xPaths[i].add(new Point(xVals[j], yVals[i]));
+					yPaths[i].add(new Point(xVals[i], yVals[j]));
+				}
+				xPaths[i].strokeColor = 'grey';
+				yPaths[i].strokeColor = 'grey';
+				grid.layer.addChild(xPaths[i]);
+				grid.layer.addChild(yPaths[i]);
+			}
+		},
+		setVisible: function(visible){
+			grid.layer.visible = visible;
+		}
+};
 
 var legend = {
 		layer: new Layer(),
@@ -91,10 +121,10 @@ var legend = {
 		textLegendReal: new PointText(),
 		textLegendProb: new PointText(),
 		createLegend: function(){
-			var Px = view.viewSize.width - 102;
-			var Py = 0 + 7;
+			var Px = view.viewSize.width - 120;
+			var Py = 0 + 15;
 			
-			legend.pathRect = new Path.Rectangle(new Point(Px , Py), new Size( 95, 6*15));
+			legend.pathRect = new Path.Rectangle(new Point(Px , Py), new Size( 105, 6*15));
 			legend.pathRect.fillColor = 'white';
 			legend.pathRect.strokeColor = 'black';
 			legend.layer.addChild(legend.pathRect);
@@ -115,7 +145,7 @@ var legend = {
 			createLegendLine(legend.pathLegendProb, legend.textLegendProb, Px, Py, 'Probability', 'grey');
 			
 			function createLegendLine(path, text, Px, Py, label, color){
-				text.point = { x: Px + 20, y: Py +5 }; 
+				text.point = { x: Px + 30, y: Py +5 }; 
 				text.content = label;
 				text.fillColor = color;
 				text.fontSize = 15;
@@ -123,7 +153,7 @@ var legend = {
 				text.bringToFront();
 				legend.layer.addChild(text);
 				
-				path.add({x: Px + 5, y: Py}, {x: Px + 15, y: Py});
+				path.add({x: Px + 5, y: Py}, {x: Px + 25, y: Py});
 				path.strokeColor = color;
 				path.strokeWidth = 3;
 				legend.layer.addChild(path);
@@ -840,6 +870,7 @@ function Energy(E ){
 		var newYValue = event.point.y;
 		var newE = layout.xAxisHeight - newYValue;
 		parent.moveLine(newYValue);
+		updateBoundStates();
 		updateEnergy();
 	};
 
@@ -882,11 +913,11 @@ function SquarePotential(xAxis,left,right,ceil){
 	this.ceiling.strokeWidth = 5;
 	this.ceiling.strokeColor = 'blue';
 	this.pathPlotComplex.strokeColor = 'red';
-	this.pathPlotComplex.strokeWidth = 3;
+	this.pathPlotComplex.strokeWidth = 3.5;
 	this.pathPlotReal.strokeColor = 'green';
-	this.pathPlotReal.strokeWidth = 3;
+	this.pathPlotReal.strokeWidth = 3.5;
 	this.pathPlotProb.strokeColor = 'grey';
-	this.pathPlotProb.strokeWidth = 3;
+	this.pathPlotProb.strokeWidth = 3.5;
 
 	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal,this.pathPlotProb]);
 	this.rightSide.selectable = true;
@@ -1054,11 +1085,11 @@ function LastPotential(xAxis,left){
 	this.ceiling.strokeWidth = 5;
 	this.ceiling.strokeColor = 'blue';
 	this.pathPlotComplex.strokeColor = 'red';
-	this.pathPlotComplex.strokeWidth = 3;
+	this.pathPlotComplex.strokeWidth = 3.5;
 	this.pathPlotReal.strokeColor = 'green';
-	this.pathPlotReal.strokeWidth = 3;
+	this.pathPlotReal.strokeWidth = 3.5;
 	this.pathPlotProb.strokeColor = 'grey';
-	this.pathPlotProb.strokeWidth = 3;
+	this.pathPlotProb.strokeWidth = 3.5;
 
 	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal, this.pathPlotProb]);
 	this.leftSide.selectable = true;
@@ -1147,11 +1178,11 @@ function FirstPotential(xAxis, right){
 	this.ceiling.strokeWidth = 5;
 	this.ceiling.strokeColor = 'blue';
 	this.pathPlotComplex.strokeColor = 'red';
-	this.pathPlotComplex.strokeWidth = 3;
+	this.pathPlotComplex.strokeWidth = 3.5;
 	this.pathPlotReal.strokeColor = 'green';
-	this.pathPlotReal.strokeWidth = 3;
+	this.pathPlotReal.strokeWidth = 3.5;
 	this.pathPlotProb.strokeColor = 'grey';
-	this.pathPlotProb.strokeWidth = 3;
+	this.pathPlotProb.strokeWidth = 3.5;
 
 	plotter.layer.addChildren([this.leftSide,this.rightSide,this.ceiling,this.pathPlotComplex,this.pathPlotReal, this.pathPlotProb]);
 	this.rightSide.selectable = true;
@@ -1339,6 +1370,7 @@ function setVisibility(){
 	plotter.setVisible($("#realCheckbox").prop('checked'), 'pathPlotReal');
 	plotter.setVisible($("#complexCheckbox").prop('checked'), 'pathPlotComplex');
 	plotter.setVisible($("#probCheckbox").prop('checked'), 'pathPlotProb');
+	grid.setVisible($("#gridCheckbox").prop('checked'));
 }
 
 function boundStateMsg(){
@@ -1357,7 +1389,6 @@ function boundStateMsg(){
 
 function updateEnergy(){
 	// Controls what happens when we drag or drop the energy line.
-	updateBoundStates();
 	solve();
 }
 
@@ -1408,14 +1439,16 @@ $(function(){
 	layout.createMainRect();
 	layout.createAxes();
 	layout.axes.sendToBack();
+	grid.createGrid();
 	legend.createLegend();
 	plotter.layer.activate();
-
+	energy = new Energy(150);
 	regionsSetup.randomSetup();
-	energy = new Energy(50);
+	
 	energy.line.bringToFront();
 	updateRegion();
 	legend.layer.insertAbove(project.activeLayer);
+	grid.layer.insertBelow(layout.layer);
 });
 
 $(function(){
@@ -1520,6 +1553,12 @@ $(function(){
 		plotter.setVisible(this.checked, 'pathPlotProb');
 
 	});
+	
+	$("#gridCheckbox").change( function(){
+		grid.setVisible(this.checked);
+
+	});
+	
 });
 
 
