@@ -144,6 +144,8 @@ var legend = {
 			Py += 16;
 			createLegendLine(legend.pathLegendProb, legend.textLegendProb, Px, Py, 'Probability', 'grey');
 			
+			legend.layer.selectable = true;
+			legend.layer.draggable_all = true;
 			function createLegendLine(path, text, Px, Py, label, color){
 				text.point = { x: Px + 30, y: Py +5 }; 
 				text.content = label;
@@ -1426,6 +1428,8 @@ function onFrame(event){
 function onMouseMove(event) {
 	// Controls the mouse cursor depending on which path we hover over.
 	project.activeLayer.selected = false;
+	legend.layer.selected = false;
+	
 	document.getElementById("canvas").style.cursor = "default";
 	if (event.item) {
 		if (event.item.selectable){
@@ -1436,6 +1440,13 @@ function onMouseMove(event) {
 		}
 		if (event.item.draggable_ew){
 			document.getElementById("canvas").style.cursor = "ew-resize";
+		}
+		if (event.item.draggable_all){
+			document.getElementById("canvas").style.cursor = "all-scroll";
+		}
+		if (event.item.parent == legend.layer){
+			legend.pathRect.selected = true;
+			document.getElementById("canvas").style.cursor = "all-scroll";
 		}
 	}
 }
