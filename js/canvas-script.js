@@ -1480,8 +1480,8 @@ $(function(){
 		solver.boundState = true;
 		resetBoundStates();
 		findBoundStates();
-		updateEnergy();
-
+		solve();
+		updateBoundStates();
 		//Pops up a modal and tells the user how many boundstates were found
 		$('#boundStatesFound').html(boundStateMsg());
 		$("#basicModal").modal('show');
