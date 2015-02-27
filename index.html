@@ -83,32 +83,43 @@ MathJax.Hub.Config({
 				</div>
 			</div>
 		</div>
-		<div class="container">
-			<div class=" btn-group btn-justified" style="width: 920px">
 
-				<button class="btn btn-default" id="boundStateBtn">Find
-					Boundstates</button>
+		<div class="container" id="btn-container">
 
-				<button class="btn btn-default" id="prevBoundStateBtn">Previous
-					Boundstates</button>
+			<div class="row">
 
-				<button class="btn btn-default" id="nextBoundStateBtn">Next
-					Boundstates</button>
+				<div class="col-xs-7">
+					<div class=" btn-group btn-justified">
+						<button class="btn btn-default" id="boundStateBtn">Find
+							Boundstates</button>
 
-				<div class="input-group">
-					<span class="input-group-addon "> Preset Potentials</span> <select
-						class="form-control" id="presetPotential">
-						<option>Random</option>
-						<option>Half-circle dome</option>
-						<option>Half-circle well</option>
-					</select>
+						<button class="btn btn-default" id="prevBoundStateBtn">Previous
+							Boundstates</button>
+
+						<button class="btn btn-default" id="nextBoundStateBtn">Next
+							Boundstates</button>
+					</div>
+				</div>
+				<div class="col-xs-5">
+					<div class=" btn-group btn-justified">
+
+						<div class="input-group">
+							<span class="input-group-addon "> Preset Potentials</span> <select
+								class="form-control" id="presetPotential">
+								<option>Random</option>
+								<option>Half-circle dome</option>
+								<option>Half-circle well</option>
+							</select>
+						</div>
+					</div>
 				</div>
 			</div>
-			<div class=" btn-group" style="width: 920px">
 
-				<div class="row">
-
-					<div class="col-xs-4">
+			<div class="row">
+				<div class="col-xs-1"></div>
+				
+				<div class="col-xs-3">
+					<div class="checkbox-group">
 						<div class="checkbox">
 							<label> <input type="checkbox" id="realCheckbox" checked>
 								Plot Real Part
@@ -128,9 +139,9 @@ MathJax.Hub.Config({
 							</label>
 						</div>
 					</div>
-					<div class="col-xs-4">
-						
-						
+				</div>
+				<div class="col-xs-3">
+					<div class="checkbox-group">
 						<div class="checkbox">
 							<label> <input type="checkbox" id="gridCheckbox">
 								Show Grid
@@ -148,34 +159,33 @@ MathJax.Hub.Config({
 								Time Evolve
 							</label>
 						</div>
-					
-					</div>
-
-					
-
-					<div class="col-xs-4">
-						<div class='button-group'>
-							<div class="input-group">
-								<span class="input-group-addon text-center"> Number of
-									regions</span><input type="number" min="3" max="10"
-									class="form-control" value=5 id="nRegions">
-							</div>
-
-							<div class="input-group">
-								<span class="input-group-addon text-center"> Wavefunction
-									Scaling</span><input type="number" min="0.5" max="5" step="0.5"
-									class="form-control" value=2 id="yScale">
-							</div>
-
-							<div class="input-group">
-								<span class="input-group-addon text-center"> Probability
-									Scaling</span><input type="number" min="0.5" max="5" step="0.5"
-									class="form-control" value=2 id="yScaleProb">
-							</div>
-						</div>
 					</div>
 				</div>
 
+
+
+				<div class="col-xs-5">
+					<div class='button-group '>
+						<div class="input-group">
+							<span class="input-group-addon text-center"> Number of
+								regions</span><input type="number" min="3" max="10"
+								class="form-control" value=5 id="nRegions">
+						</div>
+
+						<div class="input-group">
+							<span class="input-group-addon text-center"> Wavefunction
+								Scaling</span><input type="number" min="0.5" max="5" step="0.5"
+								class="form-control" value=2 id="yScale">
+						</div>
+
+						<div class="input-group">
+							<span class="input-group-addon text-center"> Probability
+								Scaling</span><input type="number" min="0.5" max="5" step="0.5"
+								class="form-control" value=2 id="yScaleProb">
+						</div>
+					</div>
+				</div>
+				
 			</div>
 		</div>
 	</div>

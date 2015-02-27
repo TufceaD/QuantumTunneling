@@ -37,3 +37,15 @@ p.img-text{
 	text-align: right;
 	font-size: 90%;
 }
+
+.checkbox-group {
+	text-align: left;
+}
+
+#btn-container {
+	width: 920px;
+}
+
+.form-control {
+	text-align: right;
+}
