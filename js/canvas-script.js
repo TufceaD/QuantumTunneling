@@ -47,7 +47,7 @@ var layout = {
 			var yAxisArrow = new Path(pYArrowLeft, pYArrowTop, pYArrowRight);
 			// yLabel
 			var yLabel = new PointText(pTop + {x: -20, y: -10});
-			yLabel.content = "E, φ";
+			yLabel.content = "E, ψ";
 			yLabel.fontSize = 20;
 			yLabel.visible = true;
 			// xAxis 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
- <meta charset="utf-8">
+<meta charset="utf-8">
 <!-- Bootstrap -->
 
 <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
@@ -42,7 +42,16 @@
 	canvas="canvas">
 </script>
 
+<!-- MathJax for displaying latex online -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
 
+<script type="text/javascript"
+	src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 
 </head>
 
@@ -50,6 +59,7 @@
 
 
 	<div class="container" id="canvasContainer">
+		<h1>Quantum Tunneling Visualizer</h1>
 		<canvas id="canvas" width="980" height="550"> Your browser does not support HTML5 Canvas, please update to a more modern browser.</canvas>
 
 
@@ -98,8 +108,6 @@
 
 				<div class="row">
 
-					<div class="col-xs-4"></div>
-
 					<div class="col-xs-4">
 						<div class="checkbox">
 							<label> <input type="checkbox" id="realCheckbox" checked>
@@ -119,30 +127,34 @@
 								Plot Probability
 							</label>
 						</div>
+					</div>
+					<div class="col-xs-4">
+						
 						
 						<div class="checkbox">
-							<label> <input type="checkbox" id="gridCheckbox" >
+							<label> <input type="checkbox" id="gridCheckbox">
 								Show Grid
 							</label>
 						</div>
-						
+
 						<div class="checkbox">
-							<label> <input type="checkbox" id="legendCheckbox" checked>
-								Show Legend
+							<label> <input type="checkbox" id="legendCheckbox"
+								checked> Show Legend
 							</label>
 						</div>
-						
+
 						<div class="checkbox">
 							<label> <input type="checkbox" id="timeCheckbox" checked>
 								Time Evolve
 							</label>
 						</div>
+					
 					</div>
 
-					<div class="col-xs-4"></div>
+					
 
 					<div class="col-xs-4">
-						<div class='btn-group'>
+						<div class='button-group'>
 							<div class="input-group">
 								<span class="input-group-addon text-center"> Number of
 									regions</span><input type="number" min="3" max="10"
@@ -168,6 +180,586 @@
 		</div>
 	</div>
 
-	<div class="jumbotron">Explanations</div>
+	<div class="jumbotron">
+		<div class="container">
+			<h1>What is Quantum Tunneling?</h1>
+			<p>
+			Quantum theory treats particles as waves, hence the term wavefunction. What we normally think of as particles, having a precise momentum and position, 
+			isn't so in quantum theory. Instead particles are waves tighly peaked at a position $x$ or momentum $p$. This is unavoidable, since by the uncertainty principle,
+			only one quantity of a conjugate pairs can be precisely known. For example, if a particle has a wave sharply peaked around a momentum value, it's position wavefunction must
+			be widely spread out.
+			</p>
+			
+			<p> One of the property of waves, is their ability to bleed through things. Just as shining light on a conductor will create an evanescent wave that exponentially decays within it,
+			throwing particles at a wall will cause the wavefunction to penetrate the wall, giving a small, but non-zero probability of finding it on the other side!</p>
+			
+			
+			<h2>The Classical Case</h2>
+			
+			<p> Imagine this scenario, you're throwing tenis balls at a wall. You probably expect them to <em> always </em> bounce right back, you're most likely not strong enough to break the wall. You also know, intuitively,
+			that if you really were that strong, if you could threw it really hard and with a lot of energy, you would break through the wall. After all, that's why they invented cannons and trebuchets. You can think of 
+			the wall as a very tall potential barrier that is the aggregate of many electromagnetic bonds between wall particles. But what if instead of throwing tennis balls, we were throwing electrons, and instead of firing
+			at a concrete wall, we were aiming at a thin sheet of graphene? To answer such questions, we have to enter the quantum world.
+			</p>
+			
+			<h2>One Dimensional Scattering</h2>
+			
+			<p> What quantum mechanics states, is that if you keep throwing things at a wall, eventually it will go right through. It doesn't matter whether you're Babe Ruth or you've never thrown a ball in your life. Sometimes
+			it will just tunnel right through. </p>
+			
+			<p>To make it easier to understand the wavelike nature of quantum mechanics, instead of firing particles one at a time, let's fire a lot of them in a continuous stream. Now our wavefunction describes how many 
+			particles are at a given position and time. It's important to remember that we do not need to fire multiple particles, there will be quantum effects such as tunneling and diffraction even when firing lone particles. 
+			It is simply easier to conceptualize it as an ensemble average of many particles. </p>
+			
+			<img src="http://upload.wikimedia.org/wikipedia/commons/1/1d/TunnelEffektKling1.png" id="tunneling-wiki">
+			 <p class="img-text">Courtesy of Felix Kling and the Wikipedia commons  </p>
+			
+			<p>
+			The particles we fire in a stream form a right-travelling wave, when they meet a potential barrier, a reflected left-travelling wave 
+			is created. Together with these two waves form a standing wave. However, not all particles are reflected, a few of them penetrate the barrier, their number is exponentially supressed as it is progressively harder to
+			travel deeper into the barrier. The few electrons that make it through the barrier become part of a right-travelling wave. Since there is no more succecant barrier, there is no reflected wave in this region and no standing wave forms.
+			</p>
+			
+			
+			
+			<h2>Boundstates</h2>
+
+			<p> In the case of an attractive potential, we may have boundstates. In the simple one-dimensional potential well, we are always guaranteed to have at least one boundstate. Boundstates are characterised by the
+			fact they are usually quantized, that is only a few discrete energies are allowed. The first boundstate is called the groundstate, and systems with unbounded potentials usually have infinitely many boundstates. For example, the 
+			quantum harmonic oscilator with potential $\frac{1}{2} m \omega^2 x^2$ and admit infinitely many boundstates with energies $E_n = \hbar\omega \left( n + \frac{1}{2}\right)$.</p>
+			
+			<p> Quantum tunneling applies even for boundstates. Unless the potential walls are infinite, the wavefunction will bleed through the walls giving a non-zero probability of finding the particle inside a wall, even if the walls surrounding the 
+			box extend to $\pm \infty$ along the x-axis!</p>
+
+			<h1>Guide to this visualizer</h1>
+			
+			<p> Welcome to the Quantum Tunneling Visualizer. It is meant as a teaching tool to demonstrate one dimensional scattering and boundstates.
+			It is fully interactive, you can see how the wavefunction changes as you increase or decrease energy, barrier heights and barrier widths. It is great
+			to gain an intuition for the qualitative characteristics as the many parameters change.
+			<h2>Drag it around!</h2>
+			<p>
+			Almost everything is draggable. If you hover over a line, your cursor will change to indicate what you can do.
+			</p>
+			<ul class="">
+			<li class=""> Drag the orange energy line up and down to increase the energy of the particles we are firing. </li>
+			<li class=""> Drag the horizontal blue lines of a barrier to increase or decrease the potential in that region. </li>
+			<li class=""> Drag the vertical blue lines of a barrier to change its width.</li>
+			<li class=""> Drag the legend around to change its position if it's in your way. </li>
+			</ul>
+			
+			<h2>Display and Controls</h2>
+			
+			<p> There are a few more things you can play with.</p>
+			<ul>
+			<li> There is a set of buttons dedicated to the boundstates functionality. </li>
+			<li> You can choose a particular preset from the Preset Potential dropdown list </li>
+			<li> You can change how many regions there are with the Number of regions input </li>
+			<li> You can change the scale of the wavefunction with the Wavefunction Scaling input </li>
+			<li> You can change the scale of the probability function with the Probability Scaling input </li>
+			<li> You can decide whether to plot the real, imaginary part of the wavefunction by checking the checkboxes </li>
+			<li> You can decide whether to plot the probability function by checking the Plot Probability checkbox </li>
+			<li> You can show a grid to guide your eye by checking the Show Grid checkbox </li>
+			<li> You can hide or show the legend by checking the Show Legend checkbox </li>
+			<li> You can pause the animation by unchecking the Time Evolve checkbox </li>
+			</ul>
+			
+			<h2>Presets</h2>
+			<p>There are a number of presets available to you. 
+			</p>
+			<ul>
+			<li>The Random preset generates even regions each with a random potential height </li>
+			<li>The Half-circle dome preset generates equal domains that approximate a circular dome </li>
+			<li>The Half-circle well preset generates equal domains that approximate a circular well </li>
+			</ul>
+			<h2>Boundstates</h2>
+			<p>
+			Three control buttons are available to interact with the boundstates. Once you've settled on a configuration, press the 
+			Find Boundstates button to search for all possible boundstates. You will be prompted once the boundstates are found. Beware!</p>
+			
+			<p> There may not be any,
+			not all configurations admit a boundstate. If all went well and you found a configuration that admits boundstates, you can then use the 
+			Previous Boundstate and Next Boundstate to automatically go back and forth boundstates. The Previous Boundstate button takes you to the closest boundstate
+			with smaller energy. The Next Boundstate button takes you to the closest boundstate with higher energy. </p>
+			
+			<p> You may also drag and drop the energy line. The application will automatically go to the closest boundstate with higher energy. </p>
+			
+			<h1>The mathematics</h1>
+			<h2>Schrodinger's Equation</h2>
+
+			<p>In the most basic formulation of quantum mechanics, the
+				wavefunction $\psi$ of a quantum state is described by the
+				Schrödinger equation with the Hamiltonian operator $\hat{H}$: $$
+				i\hbar \frac{\partial}{\partial t} \psi = \hat{H}\psi $$</p>
+
+			<p>Our specific case is that of non-relativistic particles of
+				mass $m$ in a one dimensional time-independent potential $V(x)$. The
+				Hamiltonian is then $\hat{H} =
+				\frac{-\hbar^2}{2m}\frac{\partial^2}{\partial x^2} + V(x)$ and the
+				corresponding partial differential equation (PDE) is: $$ i\hbar
+				\frac{\partial}{\partial t} \psi(x,t) = \left[
+				\frac{-\hbar^2}{2m}\frac{\partial^2}{\partial x^2} + V(x) \right]
+				\psi(x,t) $$</p>
+
+			<p>The general solution of the Schrödinger equation is hard to
+				find and in general does not admit a closed-form representations.
+				For physical and well-behaved potentials, the PDE can be separated
+				according to $x$ and $t$ dependence by assuming that $\psi(x,t)$
+				decomposes into a product of functions $\phi(x)$, $T(t)$ such that
+				$\psi(x,t) = \phi(x) T(t)$. Substituting this assumption into the
+				PDE and dividing both sides by $\psi(x,t) = \phi(x) T(t)$ yields: $$
+				\frac{i\hbar}{T(t)} \frac{\partial}{\partial t} T(t) =
+				\frac{1}{\phi(x)}\left[ \frac{-\hbar^2}{2m}\frac{\partial^2}{\partial
+				x^2} + V(x) \right] \phi(x) $$</p>
+
+			<p>It is now apparent that each side of the equation only depends
+				on one variable. Since each variable is independent, each side must
+				equal a constant $E$, such that $$ \begin{aligned}
+				\frac{i\hbar}{T(t)} \frac{\partial}{\partial t} T(t) = E \\
+				\frac{1}{\phi(x)}\left[ \frac{-\hbar^2}{2m}\frac{\partial^2}{\partial
+				x^2} + V(x) \right] \phi(x) = E \end{aligned} $$</p>
+
+			<p>The constant $E$ is readily associated to the energy of the
+				wavefunction. Such states with defined energy $E$ are called
+				eigenstates. The equation associated to the time variable, $i\hbar
+				\frac{\partial}{\partial t} T(t) = E T(t)$, describes the time
+				evolution of an eigenstate with energy $E$. The solution is simply
+
+				$$ T(t) = e^{-\textstyle{\frac{iE t}{\hbar}}} $$</p>
+
+			<p>The equation associated to the position variable, $\left[
+				\frac{-\hbar^2}{2m}\frac{\partial^2}{\partial x^2} + V(x) \right] \phi(x)
+				= E \phi(x)$, is just the time-independent Schrödinger equation.
+				Together with the boundary conditions, it will determine whether $E$
+				is quantized or whether it can take a continuum of values. Most
+				physical systems are described by 2nd order linear differential
+				equations of a very specific form. Sturm-Liouville theory guarantees
+				the existence of a complete basis of eigenstates which can be used
+				to construct arbitrary solutions to the general Schrödinger
+				equation. Our job is then to find the allowed $E$ and the
+				corresponding $\phi(x)$.</p>
+
+			<h2>Divide and Conquer</h2>
+
+			<p>Fortunately, we have a very simple potential. It is constant
+				in each region. Our time-independent equation to solve and the corresponding
+				potential is simply: 
+				
+				$$ \begin{aligned} E \phi(x) &= \left[\frac{-\hbar^2}{2m}\frac{\partial^2}{\partial x^2} + V(x) \right] \phi(x) \\
+				 \\
+				 V(x) &= \left\{
+				 \begin{array}{c c c}
+				 V_0 = 0 & \quad \text{if } & -\infty < x < x_1 \\ 
+				 &... \\  
+				 V_i & \quad \text{if } & x_i < x < x_{i+1} \\ 
+				  &... \\ 
+				 V_n = 0 & \quad \text{if } & x_n < x < \infty \\ 
+				 \end{array} \right.
+				\end{aligned} 
+				
+				$$</p>
+				
+				<p> We can divide our problem into first finding the solution in each region and then matching up these solutions according to 
+				the boundary conditions between each region and at $\pm \infty$.
+				
+				$$ \begin{aligned} 
+				 \phi(x) &= \left\{
+				 \begin{array}{c c c c l}
+				 \phi_0(x) & \quad \text{if } & -\infty < x < x_1  &\text{ for } & V_0 = 0\\ 
+				 &... \\  
+				 \phi_i(x) & \quad \text{if } & x_i < x < x_{i+1} &\text{ for } &V_i \\ 
+				  &... \\ 
+				 \phi_n(x) & \quad \text{if } & x_n < x < \infty &\text{ for } & V_n = 0\\ 
+				 \end{array} \right.
+				\end{aligned} 
+				
+				$$
+				
+				 </p>
+				
+				<p> For a given region with constant $V$, we have
+				
+				$$(E - V) \phi(x) = \frac{-\hbar^2}{2m}\frac{\partial^2}{\partial x^2} \phi(x)$$ 
+				
+				</p>
+				
+				<p> There are then 3 types of solutions depending on the sign of $E-V$. We begin with the case $E > V$, where the state has enough energy to
+				freely travel. The solution consist of a left and right traveling waves with wavenumber $k$.
+				
+				$$ \phi(x) = A e^{ ikx} + B e^{ -ikx} \quad \text{with} \quad k = \sqrt{\frac{2m (E-V)}{\hbar^2}} \quad \text{when $E > V$}$$
+				
+				</p>
+				
+				<p> When $E < V$, the state becomes a superposition of increasing and decreasing exponentials with wavenumber $q$.
+				
+				$$ \phi(x) = A e^{ qx} + B e^{ -qx} \quad \text{with} \quad q = \sqrt{\frac{2m (V-E)}{\hbar^2}} \quad \text{when $E < V$}$$
+				 </p>
+				 
+				 <p> When $E = V$, also called a turning point, the state becomes degenerate and the solution is linear.
+				$$ \phi(x) = A + Bx \quad \text{when $E = V$}$$
+				</p>
+				<p>
+				Now that we have the piecewise solution for each region, how do we connect two regions? By virtue of Schrödinger's equation being 2nd order,
+				we must have continuity of the functions and their derivative at the boundary between two regions. Given two wavefunctions $\phi_i(x)$ and 
+				$\phi_{i+1}(x)$, this gives the constraints at the boundary $x_{i+1}$:
+				
+				$$
+				\begin{aligned}
+				 \phi_i(x_{i+1}) &= \phi_{i+1}(x_{i+1}) \\
+				 \left. \frac{\partial}{\partial x} \phi_i(x) \right|_{x = x_{i+1}} &= \left. \frac{\partial}{\partial x}\phi_{i+1}(x) \right|_{x = x_{i+1}}
+				 \end{aligned}
+				  $$
+				</p>
+				
+				<p> This means that for a potential with $n+1$ regions, we have $2n$ constraints from the boundary matching and another constraint from normalization. 
+				This gives a total of $2n+1$ constraints. According to our solution, there are also $2n+2$ coefficients to solve for, 2 for each $n+1$ region. The reason for this discrepency 
+				is found by examining the first and last region which we do in the next section.
+				</p>
+				
+			<h2>Solving the Linear System
+			</h2>
+			<p> To recapitulate, we have broken the problem into solving and matching functions for each region. This gives us a system of equations and constraints as follows:
+			
+			$$ \begin{aligned} 
+				 \phi(x) &= \left\{
+				 \begin{array}{c c c c l}
+				 A_0\phi_{0,1}(x) + B_0\phi_{0,2}(x)  & \quad \text{if } & -\infty < x < x_1  &\text{ for } & V_0 = 0\\ 
+				 &... \\  
+				 A_i\phi_{i,1}(x) + B_i\phi_{i,2}(x) & \quad \text{if } & x_i < x < x_{i+1} &\text{ for } &V_i \\ 
+				  &... \\ 
+				 A_n\phi_{n,1}(x) + B_n\phi_{n,2}(x) & \quad \text{if } & x_n < x < \infty &\text{ for } & V_n = 0\\ 
+				 \end{array} \right.
+				\end{aligned} 
+				
+				$$
+				<br/>
+				$$
+				\begin{aligned}
+				 \phi_i(x_{i+1}) &= \phi_{i+1}(x_{i+1}) \\
+				 \left. \frac{\partial}{\partial x} \phi_i(x) \right|_{x = x_{i+1}} &= \left. \frac{\partial}{\partial x}\phi_{i+1}(x) \right|_{x = x_{i+1}}
+				 \end{aligned}
+				 $$
+				 
+				 $$
+				 \int dx \, |\phi(x)|^2 = \sum_i \int_{x_i}^{x_{i+1}} dx \, |\phi_i(x)|^2 = 1
+				  $$
+				
+				
+			<p> How exactly we proceed next depends on whether we are looking at scattering states or boundstates. Because we have fixed $V_0$ and $V_n$ to be equal to $0$, we must have that
+			any state with $E > 0$ is a scattering state and any state with $E < 0$ is a boundstate. We treat each case separately. </p>
+			<h3> Scattering</h3>
+			<p> When looking at scattering states, we are imagining forever firing a constant stream of particles from far away towards the potential. As such, we expect to always find
+			a right-travelling wave (the particles we fire) in the first region $V_0$. We also expect to find a stream of particles which have bounced back from the potential. Those are the 
+			left-travelling waves. </p>
+			
+			<p>Inside each inner regions, $V_i$ for $ i= 1,...,n-1$, we expect to find both a reflected and outgoing stream, whether as a wave or exponential. Since each
+			inner region is finite, we do not need to worry about forbiding any exponential waves due to normalization. 
+			</p>
+			<p>The final region $V_n = 0$ must contain the stream of particles that made
+			it through the potential. However, since this is the last region, there cannot be any reflected wave, so we rule out left-travelling wave $e^{-ikx}$ by setting its coefficient to zero.
+			The total number of coefficients to solve for is then $2n + 1$, $2$ for the first $n$ regions plus $1$ for the very last region. This matches the $2n+1$ constraints we found earlier, $2n$ 
+			for each boundary between region plus $1$ for the overall normalization. From each constraint, we can then build a linear system and solve for the coefficients.</p>
+			
+			<p> It turns out that the system is consistent for any energy $E > 0$ and we have a continous spectrum of scattering states. To solve the linear system, any number of methods can be used.
+			Substituting by hand will yield closed-form results for systems with few regions. For large system, numerically inversing the matrix or row reducing is the only feasible option. </p>
+			
+			<h3> Boundstate</h3>
+			<p>
+			Boundstates have negative energy $E < 0$. We examine each region to see which solutions are allowed. For the first region, $V_0 = 0 > E$, therefore the state is exponentially decaying. Since
+			this region extends from $-\infty$ we have to forbid the decaying exponential $e^{-kx}$ which blows up as $x \rightarrow - \infty$. Because the state would not be renormalizable, we set that coefficient
+			to zero. The growing exponential $e^{kx}$ goes to zero as $x \rightarrow -\infty$, no problem here. </p>
+			
+			<p>For each inner regions, $V_i$ for $ i= 1,...,n-1$, we expect to find two solutions. Since each	inner region is finite, we do not need to worry about forbiding any exponential waves due to normalization.
+			 </p>
+			 
+			 <p>The logic for the last region is the same as for the first. Since $e^{kx}$ diverges as $x \rightarrow \infty$, we must forbid it by setting its coefficient to zero. Because
+			 $e^{-kx} \rightarrow 0$ as $x \rightarrow \infty$, that solution is allowed.</p>
+			 
+			 <p>This time, we had to forbid two solutions, which means we only have $2n$ coefficients to find. Yet we still have the same $2n+1$ constraints. This means that the system is generally not consistent, 
+			 it is overconstrained. In fact, this is the essence of energy quantization. There are some very precise energy for which the system <em>is</em> consistent. One of the boundary matching 
+			 constraint becomes a linear combination of the other equations and allows a solution. Finding boundstates is much harder than finding scattering states, but the methodology is the same.</p> 
+			 
+			 <p> For very small systems, it is possible to use substitution by hand to find the a constraint for $E$ to get a boundstate. This is usually a transcendental equation which has to be 
+			 solved numerically. A famous is example is the simple one-dimensional symmetrical potential well. For any depth of the well, there is always at least one boundstate, this can be shown with a mix of analytical and numerical work and is left as an
+			 exercise for the reader. In general, not every potential setup will admit boundstates, there are however theorems that guarantee boundstates when some condition is met.
+			
+			<h2>Adding back time dependence</h2>
+			
+			<p> After having solved $\phi(x)$, we can combine it with $T(t)$ to get $\phi(x,t) = \phi(x)T(t)$, where $T(t) = e^{-{\frac{iE t}{\hbar}}}$. Each eigenstate has its own oscillatory frequency, which means linearly combining eigenstates will lead to 
+			interesting results and precession between eigenstates. </p>
+			
+			 <p> Despite the fact that we only solved for eigenstates where we send an eternal beam of particles, we can use our solution to
+			solve scattering problems with any kind of wave packet. To do so, we only need to write the wavepacket as a linear combination of our eigenstates. In the case of a continuum of energies, this amounts to taking a transform of the wave packet. (It's easier said than done!)</p>
+			
+			<h2> Advanced topics: Approximating potentials with square barriers</h2>
+			
+			<p> It might seem that solving regions of flat potentials isn't particularly useful, however, there is some merit to it. Other than making cool animations, we can approximate any potential as a 
+			series of constant potential barriers. This is similar to how we approximate Riemannian integrals by breaking up functions into series of rectangles and adding up the individual areas. It is possible to approximate the wavefunction this way, however it is increasingly
+			taxing as we have to solve bigger and bigger system of equations. A more practical use is that of finding the transmission coefficient, defined as the ratio between the incomming probability current and the outgoing probability current. Roughly this corresponds to 
+			the fraction of particles that make it through the potential. 
+			
+			$$
+			T = \frac{j_{\text{trans}}}{j_{inc}}
+			$$
+			</p>
+			
+			<p> Consider a simple potential barrier and particles of energy $E < V_0$ so there is tunelling. The potential is 
+			
+			$$ 
+				 V(x) = \left\{
+				 \begin{array}{c c c}
+				 V_0 = 0 & \quad \text{if } & -\infty < x < 0 \\ 
+				 V_1 & \quad \text{if } & 0 < x < a \\ 
+				 V_2 = 0 & \quad \text{if } & a < x < \infty \\ 
+				 \end{array} \right.
+				$$
+			</p>
+			
+			<p> The solution is 
+			
+			$$
+			\phi(x) = \left\{
+				 \begin{array}{c c c c l}
+				 A_0 e^{ikx} + B_0 e^{-ikx}  & \quad \text{if } & -\infty < x < 0  &\text{ for } & V_0 = 0\\ 
+				 A_1 e^{qx} + B_1 e^{-qx} & \quad \text{if } & 0 < x < a &\text{ for } &V_i \\ 
+				 A_2 e^{ikx} & \quad \text{if } & a< x < \infty &\text{ for } & V_n = 0\\ 
+				 \end{array} \right.
+			$$
+			</p>
+			
+			<p> The constraints are
+			
+			$$
+			\begin{aligned}
+			A_0 + B_0 &= A_1 + B_1 \\
+			ik( A_0 - B_0) &= q ( A_1 - B_1) \\
+			A_1 e^{qa} + B_1 e^{-qa} &= A_3 e^{ika} \\
+			q(A_1 e^{qa} - B_1 e^{-qa}) &= ik A_2 e^{ika}
+			\end{aligned}
+			$$
+			
+			</p>
+			
+			<p> The unknowns $B_0, A_1, B_1$ can be eliminated to yield the transmission coefficient $T$, which we then simplify in the limit $qa \gg 1$, which implies the probability of transmission is very small:
+			
+			$$
+			T = \frac{j_{\text{trans}}}{j_{inc}} = \frac{\frac{\hbar k}{m} |A_2|^2}{\frac{\hbar k}{m} |A_0|^2} = \frac{1}{1 + \left(\frac{k^2 + q^2}{2kq}\right)\text{sinh}^2(qa)} \xrightarrow{qa \gg 1} \left(\frac{4kq}{k^2+q^2}\right)^2 e^{-2qa}
+			$$
+			
+			</p>
+			
+			<p> Now that we have the tunneling probability for a single barrier, we can multiply transmission coefficients to find the probability to tunnel through multiple barriers.
+			We work in the logarithm since we will be multiplying many objects:
+			
+			$$
+			\text{ln}(T) \xrightarrow{qa \gg 1} \text{ln}\left(\frac{4kq}{k^2+q^2}\right) - 2qa \xrightarrow{qa \gg 1} -2qa
+			$$
+			</p>
+			
+			<p> Multiplying multiple transmission coefficients $T_i$ for each barrier $i$ of width $\Delta x$ in the logarithm gives
+			
+			$$
+			\text{ln}(T) \approx \text{ln}(\prod_i T_i) = \sum_i \text{ln}(T_i) = - 2\sum_i q_i \Delta x
+			$$
+			</p>
+			
+			<p> In the limit as $\Delta x \rightarrow 0$ we approximate the last term as an integral to get 
+			
+			$$
+			T \approx \text{exp}\left(- 2\sum_i q_i \Delta x\right) \approx \text{exp}\left(- 2\int_{V(x)>E} dx \sqrt{\frac{2m}{\hbar^2}(V(x)-E})\right)
+			$$
+			</p>
+			
+			<p> The limitation of this series of approximation is that it breaks down when $qa < 1$ which happens near the turning points. A more rigorous treatment is given in the WKB approximation. </p>
+			<h2> Advanced topics: The WKB approximation</h2>
+			
+			<p> The WKB approximation can be used to find approximate solution to a linear differential equation whose highest derivative is multiplied by a small parameter $\epsilon$. 
+			
+			$$
+			\epsilon \frac{d^n y}{dx^n} + a(x) \frac{d^{n-1} y}{dx^{n-1}} + \cdots + k(x)\frac{d y}{dx} + m(x)y = 0
+			$$
+			The solution is found as an asymptotic series with $\delta \rightarrow 0$, where each order can be calculated consecutively (and with increased difficulty).
+			
+			$$
+			y(x) \approx \text{exp}\left[ \frac{1}{\delta} \sum_{n=0}^{\infty} \delta^n S_n(x)\right]
+			$$
+			
+			To solve for $S_n$ at an arbritrary order, simply substitute back into the differential equation and solve the subsequent equations. We will
+			apply this method to the one-dimensional time-independant Schrödinger equation to find $\phi(x)$ at the zeroth order.
+			 </p>
+			
+			<h3> Schrödinger's equation</h3>
+			
+			<p>
+			The one-dimensional time-independant Schrödinger equation as we found from separation of variables is
+			
+			$$E \phi(x) = \left[\frac{-\hbar^2}{2m}\frac{\partial^2}{\partial x^2} + V(x) \right] \phi(x)$$
+			
+			</p>
+			
+			<p> The small parameter $\epsilon$ in this case is $\frac{\hbar^2}{2m}$ where $\hbar$ sets a very small scale. The equation can be rewritten as
+			
+			$$
+			 \frac{\partial^2}{\partial x^2} \phi(x) = \frac{2m}{\hbar^2} (V(x) - E)\phi(x)
+			$$
+			
+			</p>
+			
+			<p> We assume an exponential form of $\phi(x) = e^{\Phi(x)}$ and substitute into Schrödinger's equation to get
+			
+			$$
+			\Phi''(x) + [\Phi'(x)]^2 = \frac{2m}{\hbar^2}(V(x) - E)
+			$$
+			
+			</p>
+			
+			<p> Next we separate $\Phi'$ into real and imaginary parts to isolate the phase and amplitude of the wavefunction.
+			$$
+			\Phi'(x) = A(x) + iB(x)
+			$$
+			</p>
+			
+			<p> The amplitude becomes $\exp (\int dx'\, A(x'))$ and the phase is $\exp(\int dx' \, B(x'))$. The new set of equation in terms of $A(x)$ and $B(x)$
+			are 
+			
+			$$
+			\begin{aligned}
+			A'(x) + A(x)^2 - B(x)^2 &= \frac{2m}{\hbar^2} (V(x) - E) \\
+			B'(x) + 2 A(x)B(x) &= 0
+			\end{aligned}
+			$$
+			</p>
+			
+			<p> We can now expand $\Phi(x)$ in powers of $\hbar$ through $A(x)$ and $B(x)$ and keep only terms up to the zeroth order in $\hbar$. The expansion is
+			
+			$$
+			\begin{aligned}
+			A(x) &= \frac{1}{\hbar} \sum_{n=0}^{\infty} \hbar^n A_n(x) \approx \frac{A_0(x)}{\hbar} + A_1{x}\\
+			B(x) &= \frac{1}{\hbar} \sum_{n=0}^{\infty} \hbar^n B_n(x) \approx \frac{B_0(x)}{\hbar} + B_1{x}\\
+			\end{aligned}
+			$$
+			
+			</p>
+			<p>
+			We substitued our expansion for $A(x)$ and $B(x)$ back in their equation and keep only up to the first order terms in $\hbar$ to get 
+			
+			$$
+			\left. \begin{aligned}
+			A_0(x)^2 - B_0(x)^2 &= 2m(V(x) - E) \\
+			A_0(x)B_0(x) &= 0 
+			\end{aligned} \right\} \text{ zeroth order in $\hbar$}
+			$$
+			$$
+			\left. \begin{aligned}
+			A_0'(x) + 2 A_0(x)A_1(x) - 2 B_0(x)B_1(x) &= 0 \\
+			B_0'(x) + 2 A_0(x)B_1(x) + 2A_1(x)B_0(x) &= 0 
+			\end{aligned} \right\} \text{ first order in $\hbar$}
+			$$
+			</p>
+			<p> 
+			
+			<p> For a general potential $V(x)$, we can break the problem into $3$ cases: <p> 
+			<h4> Case $E \gg V$:</h4>
+			<p> In the case where $E \gg V$, the wavefunction is a free wave and the amplitude doesn't vary much compared to the phase. We then choose
+			$A_0(x) = 0$ which simplifies the equations to
+			$$
+			\left. \begin{aligned}
+			B_0(x)^2 &= 2m(E - V(x)) \\
+			A_0(x) &= 0 
+			\end{aligned} \right\} \text{ zeroth order in $\hbar$}
+			$$
+			$$
+			\left. \begin{aligned}
+			B_0(x)B_1(x) &= 0 \\
+			B_0'(x) + 2A_1(x)B_0(x) &= 0 
+			\end{aligned} \right\} \text{ first order in $\hbar$}
+			$$ 
+			
+			The solution to zeroth order is then $A_0(x) = 0, B_0(x) = \pm \sqrt{2m(E-V(x))}$. The solution to first order is $A_1(x) = \frac{-B_0'}{2B_0},B_1(x) = 0$. 
+			Using $\phi(x) = e^{\Phi(x)}$ we get
+			
+			$$
+			\phi_{\pm}(x) = C_{\pm}\exp \left(\int dx'\, A_0(x') + A_1(x') + i(B_0(x') + B_1(x'))\right) =\frac{ C_{\pm} \exp\left(\pm i \int dx\, \sqrt{\frac{2m}{\hbar^2}(E - V(x))}\right)}{\sqrt[4]{\frac{2m}{\hbar^2}(E - V(x))}}
+			$$
+			
+			 </p>
+			
+			
+			
+			<h4> Case $V \gg E$:</h4>
+			<p> In the case where $V \gg E$, the wavefunction is tunneling and the amplitude varies widly compared to the phase. We then choose
+			$B_0(x) = 0$ which simplifies the equations to
+			$$
+			\left. \begin{aligned}
+			A_0(x)^2 &= 2m(V(x) - E) \\
+			B_0(x) &= 0 
+			\end{aligned} \right\} \text{ zeroth order in $\hbar$}
+			$$
+			$$
+			\left. \begin{aligned}
+			A'_0(x) + 2A_0(x)A_1(x) &= 0 \\
+			A_0(x)B_1(x) &= 0 
+			\end{aligned} \right\} \text{ first order in $\hbar$}
+			$$ 
+			
+			The solution to zeroth order is then $A_0(x) = \pm \sqrt{2m(V(x) - E)}, B_0(x) = 0$. The solution to first order is $A_1(x) = \frac{-A_0'}{2A_0}, B_1(x) = 0$. 
+			Using $\phi(x) = e^{\Phi(x)}$ we get
+			
+			$$
+			\phi_{\pm}(x) = C_{\pm}\exp \left(\int dx'\, A_0(x') + A_1(x') + i(B_0(x') + B_1(x'))\right) = C_{\pm}\frac{\exp\left(\pm \int dx\, \sqrt{\frac{2m}{\hbar^2}(V(x)-E)}\right)}{\sqrt[4]{\frac{2m}{\hbar^2}(V(x)- E)}}
+			$$
+			
+			</p>
+			
+			<h4> Case $V \approx E$:</h4>
+			
+			<p> At the turning point, $|V(x) - E| \approx 0$ which suppreses the effect of $\hbar$, we therefore cannot approximate in orders of $\hbar$ as can readily be seen from the denominator which blows up.
+			Instead we expand the term $\frac{2m}{\hbar}(V(x)- E)$ around the turning point $x_0$ where $V(x_0) = 0$. 
+			
+			$$
+			\frac{2m}{\hbar}(V(x)- E) = V_1 \cdot (x-x_0) + V_2 \cdot(x-x_0)^2 + \ldots
+			$$
+			
+			Keeping only the first order term and substituting in the Schrödinger equation, we get the Airy equation
+			
+			$$
+			\frac{d^2}{dx^2}\phi(x) = V_1\cdot (x-x_0)\phi(x)
+			$$
+			
+			whose solution are the Airy functions $\text{Ai}$ and $\text{Bi}$. The Airy functions are linear near $x_0$ and oscilate asymptotically as we move away from $x_0$. The general solution for $\phi(x)$ near $x_0$ is then
+			
+			$$
+			\phi(x) = C_A \text{Ai}\left(\sqrt[3]{V_1} \cdot(x-x_0)\right) + C_B \text{Bi}\left(\sqrt[3]{V_1} \cdot(x-x_0)\right)
+			$$
+			
+			<h3> Connection Formulas</h3>
+			<p>
+			Now that we have solutions for each case $E \gg V$, $V \gg E$, and $V \approx E$ as before, we have to patch them up by appropriately choosing the coefficients in each type of region. This is a nontrivial task, especially if there
+			are many turning points. The relationship between coefficients can be found for various cases and is referred to as the "Connection formulas". 
+		</p>
+		
+		<h1>References and further reading</h1>
+		<br/>
+		<div class="panel panel-primary">
+		<div class="panel-heading"> Quantum Mechanics (in order of technical difficulty): </div>
+		<div class="list-group">
+		<a class="list-group-item" href="http://www.amazon.com/Introduction-Quantum-Mechanics-David-Griffiths/dp/0131118927"> Introduction to Quantum Mechanics (David J. Griffiths)</a>
+		
+		<a class="list-group-item"href="http://www.amazon.com/Modern-Approach-Quantum-Mechanics/dp/1891389785">A Modern Approach to Quantum Mechanics (John S. Townsend)</a>
+		
+		<a class="list-group-item"href="http://www.amazon.com/Principles-Quantum-Mechanics-2nd-Shankar/dp/0306447908">Principles of Quantum Mechanics (R. Shankar)</a>
+		
+		<a class="list-group-item list-group-item-success" href="http://www.amazon.com/Modern-Quantum-Mechanics-2nd-Sakurai/dp/0805382917">Modern Quantum Mechanics (J. J. Sakurai) [Personal Favourite]</a> 
+		</div>
+		<div class="panel-heading"> Quantum Field Theory (in order of technical difficulty):</div>
+		<div class="list-group">
+		<a class="list-group-item" href="http://www.amazon.com/Quantum-Field-Theory-Nutshell-nutshell/dp/0691140340">Quantum Field Theory in a Nutshell (A. Zee)</a>
+		
+		<a class="list-group-item" href="http://www.amazon.com/Introduction-Quantum-Theory-Frontiers-Physics/dp/0201503972">An Introduction To Quantum Field Theory (M. E. Peskin & D. V. Schroeder)</a>
+		
+		<a class="list-group-item list-group-item-success" href="http://www.amazon.com/Quantum-Field-Theory-Mark-Srednicki/dp/0521864496">Quantum Field Theory (Mark Srednicki) [Personal Favourite]</a> 
+		</div>
+		</div>
+		</div>
+	</div>
 </body>
 </html>

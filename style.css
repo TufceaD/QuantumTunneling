@@ -6,6 +6,8 @@
 	width: 100%;
 	text-align: center;
 	min-width: 1024px;
+	height: 100vh;
+	min-height: 900px;
 }
 
 canvas {
@@ -13,8 +15,25 @@ canvas {
 
 }
 
-.jumbotron {
+.jumbotron+.container {
 	width: 100%;
-	text-alignL center;
+	text-align: center;
 	min-width: 1024px;
+}
+
+.container>h1 {
+	text-align: center;
+}
+
+li {
+	font-size: 125%;
+}
+
+#tunneling-wiki {
+	width: 100%;
+}
+
+p.img-text{
+	text-align: right;
+	font-size: 90%;
 }
