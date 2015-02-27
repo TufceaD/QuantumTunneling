@@ -45,7 +45,10 @@
 <!-- MathJax for displaying latex online -->
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
-  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]},
+  "HTML-CSS": { scale: 70, linebreaks: { automatic: true } }, 
+   SVG: { linebreaks: { automatic:true } }, 
+   displayAlign: "center"
 });
 </script>
 
@@ -688,7 +691,10 @@ MathJax.Hub.Config({
 			Using $\phi(x) = e^{\Phi(x)}$ we get
 			
 			$$
-			\phi_{\pm}(x) = C_{\pm}\exp \left(\int dx'\, A_0(x') + A_1(x') + i(B_0(x') + B_1(x'))\right) =\frac{ C_{\pm} \exp\left(\pm i \int dx\, \sqrt{\frac{2m}{\hbar^2}(E - V(x))}\right)}{\sqrt[4]{\frac{2m}{\hbar^2}(E - V(x))}}
+			\begin{aligned}
+			\phi_{\pm}(x) &= C_{\pm}\exp \left(\int dx'\, A_0(x') + A_1(x') + i(B_0(x') + B_1(x'))\right) \\
+			&= \frac{ C_{\pm} \exp\left(\pm i \int dx\, \sqrt{\frac{2m}{\hbar^2}(E - V(x))}\right)}{\sqrt[4]{\frac{2m}{\hbar^2}(E - V(x))}}
+			\end{aligned}
 			$$
 			
 			 </p>
@@ -715,7 +721,10 @@ MathJax.Hub.Config({
 			Using $\phi(x) = e^{\Phi(x)}$ we get
 			
 			$$
-			\phi_{\pm}(x) = C_{\pm}\exp \left(\int dx'\, A_0(x') + A_1(x') + i(B_0(x') + B_1(x'))\right) = C_{\pm}\frac{\exp\left(\pm \int dx\, \sqrt{\frac{2m}{\hbar^2}(V(x)-E)}\right)}{\sqrt[4]{\frac{2m}{\hbar^2}(V(x)- E)}}
+			\begin{aligned}
+			\phi_{\pm}(x) &= C_{\pm}\exp \left(\int dx'\, A_0(x') + A_1(x') + i(B_0(x') + B_1(x'))\right) \\
+			&=\frac{  C_{\pm}\exp\left(\pm \int dx\, \sqrt{\frac{2m}{\hbar^2}(V(x)-E)}\right)}{\sqrt[4]{\frac{2m}{\hbar^2}(V(x)- E)}}
+			\end{aligned}
 			$$
 			
 			</p>
