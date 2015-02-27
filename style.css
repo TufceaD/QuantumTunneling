@@ -16,17 +16,25 @@ canvas {
 }
 
 .jumbotron+.container {
+	text-align: justify;
 	width: 100%;
-	text-align: center;
-	min-width: 1024px;
 }
 
+.jumbotron {
+	width: 100%;
+	min-width: 1024px;
+	padding: 0;
+}
+
+.jumbotron p {
+	font-size: 80% !important;
+}
 .container>h1 {
 	text-align: center;
 }
 
 li {
-	font-size: 125%;
+	font-size: 100%;
 }
 
 #tunneling-wiki {
@@ -35,7 +43,7 @@ li {
 
 p.img-text{
 	text-align: right;
-	font-size: 90%;
+	font-size: 60% !important;
 }
 
 .checkbox-group {
